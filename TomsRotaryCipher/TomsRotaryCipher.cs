@@ -32,7 +32,7 @@ namespace StoneAgeEncryptionService
         public CBCMode CBCMode { get; set; }
     }
 
-    class TomsRotaryCipher
+    public class TomsRotaryCipher
     {
         protected static int HighestIteration;// for analysis
 
