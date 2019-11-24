@@ -12,36 +12,35 @@ namespace StoneAgeEncryptionService
     public enum NotchPlan { Sequential, Sigaba, SigabaEcono_OTP }
     public enum CBCMode { None, Forward, Reverse }
 
-    public class Seeds
-    {
-        public byte[] SeedXOR { get; set; }
-        public byte[] SeedRotors { get; set; }
-        public byte[] SeedNotchPlan { get; set; }
-        public byte[] SeedTurnOverPositions { get; set; }
-        public byte[] SeedStartPositions { get; set; }
-        public byte[] SeedPlugBoard { get; set; }
-        public byte[] SeedReflector { get; set; }
-    }
-
-    public class Settings
-    {
-        public int MovingCipherRotors { get; set; }
-        public NotchPlan NotchPlan { get; set; }
-        public EnigmaMode EnigmaMode { get; set; }
-        public NoReflectorMode NoReflectorMode { get; set; }
-        public CBCMode CBCMode { get; set; }
-    }
-
     public class TomsRotaryCipher
     {
+        public class Seeds
+        {
+            public byte[] SeedXOR { get; set; }
+            public byte[] SeedRotors { get; set; }
+            public byte[] SeedNotchPlan { get; set; }
+            public byte[] SeedTurnOverPositions { get; set; }
+            public byte[] SeedStartPositions { get; set; }
+            public byte[] SeedPlugBoard { get; set; }
+            public byte[] SeedReflector { get; set; }
+        }
+
+        public class Settings
+        {
+            public int MovingCipherRotors { get; set; }
+            public NotchPlan NotchPlan { get; set; }
+            public EnigmaMode EnigmaMode { get; set; }
+            public NoReflectorMode NoReflectorMode { get; set; }
+            public CBCMode CBCMode { get; set; }
+        }
+
         protected static int HighestIteration;// for analysis
+        protected int TotalRotors { get { return 2 + oSettings.MovingCipherRotors; } set { } }  // MovingCipherRotors + 2; // need plugboard and reflector
 
-        protected int TotalRotors { get {return 2 +oSettings.MovingCipherRotors; } set { } }  // MovingCipherRotors + 2; // need plugboard and reflector
+        public Seeds oSeeds = new Seeds();
+        public Settings oSettings = new Settings();
 
-        protected static Seeds oSeeds = new Seeds();
-        public static Settings oSettings = new Settings();
-
-        public byte[] SAES(NotchPlan np, byte[] UserStr, 
+        public byte[] SAES(NotchPlan np, byte[] UserStr,
             EnigmaMode em,
             NoReflectorMode nrm,
             CBCMode cm = CBCMode.None)
@@ -65,7 +64,7 @@ namespace StoneAgeEncryptionService
 
             // make a local copy for speed optimization
             byte[] eSpinFactor = new byte[TotalRotors - 2];
-            int[,] notchTurnoverPlan = new int[0,0];
+            int[,] notchTurnoverPlan = new int[0, 0];
 
             AssignTurnOverPositions(ref eSpinFactor, BitConverter.ToInt32(oSeeds.SeedTurnOverPositions, 0));
 
@@ -76,8 +75,8 @@ namespace StoneAgeEncryptionService
             byte[] eStartPositions = new byte[TotalRotors - 2];
             AssignStartPositions(ref eStartPositions, BitConverter.ToInt32(oSeeds.SeedStartPositions, 0));
             ConfigureStartPositions(eStartPositions, radix, TotalRotors, ref e);
-            CreatePlugBoard(ref e, BitConverter.ToInt32(oSeeds.SeedPlugBoard, 0),radix, randomMultiplier);
-            CreateReflector(ref e, BitConverter.ToInt32(oSeeds.SeedReflector, 0),radix, randomMultiplier);
+            CreatePlugBoard(ref e, BitConverter.ToInt32(oSeeds.SeedPlugBoard, 0), radix, randomMultiplier);
+            CreateReflector(ref e, BitConverter.ToInt32(oSeeds.SeedReflector, 0), radix, randomMultiplier);
 
             oSettings.MovingCipherRotors = movingCipherRotors;
             oSettings.EnigmaMode = em;
@@ -146,7 +145,8 @@ namespace StoneAgeEncryptionService
                     if (i.Equals(0))
                     {
                         TransformLast = oSeeds.SeedXOR[0];// IV
-                    } else
+                    }
+                    else
                     {
                         TransformLast = UserStr[i - 1];
                     }
@@ -203,7 +203,7 @@ namespace StoneAgeEncryptionService
         {
             for (int i = 1; i <= Rotors - 2; i++)
             {
-                MoveArrayPointer(i, eStartPositions[i - 1], Radix,ref e);
+                MoveArrayPointer(i, eStartPositions[i - 1], Radix, ref e);
             }
         }
 
@@ -248,7 +248,7 @@ namespace StoneAgeEncryptionService
             }
         }
 
-        private void AssignStartPositions(ref byte[] eStartPositions,int iSeed)
+        private void AssignStartPositions(ref byte[] eStartPositions, int iSeed)
         {
             Random oRandom = new Random(iSeed);
             oRandom.NextBytes(eStartPositions);
@@ -288,7 +288,7 @@ namespace StoneAgeEncryptionService
             }
         }
 
-        private void CreateReflector(ref byte[,,] b, int Seed, int radix,int randomMultiplier)
+        private void CreateReflector(ref byte[,,] b, int Seed, int radix, int randomMultiplier)
         {// re-create this rotor with seed for more variance:
             byte[,,] bSource = CreateMachine(1, 2, radix);
             byte[,,] bHolding = CreateMachine(1, 2, radix);
@@ -312,8 +312,8 @@ namespace StoneAgeEncryptionService
             // now update b
             for (int iCol = 0; iCol <= (radix - 1); iCol++)
             {
-                b[TotalRotors-1, 0, bHolding[0, 0, iCol]] = bHolding[0, 1, iCol];
-                b[TotalRotors-1, 1, bHolding[0, 1, iCol]] = bHolding[0, 0, iCol];
+                b[TotalRotors - 1, 0, bHolding[0, 0, iCol]] = bHolding[0, 1, iCol];
+                b[TotalRotors - 1, 1, bHolding[0, 1, iCol]] = bHolding[0, 0, iCol];
             }
         }
 
@@ -414,7 +414,7 @@ namespace StoneAgeEncryptionService
             }
         }
 
-        public static void PopulateSeeds(
+        public void PopulateSeeds(
             byte[] bSeedXOR,
             byte[] bSeedRotors,
             byte[] bSeedNotchPlan,
@@ -433,17 +433,17 @@ namespace StoneAgeEncryptionService
             oSeeds.SeedTurnOverPositions = bSeedTurnOverPositions;
         }
 
-        public static byte[] GetAll()
+        public byte[] GetAll()
         {
             return GetSeeds().Concat(GetSettings()).ToArray();
         }
 
-        private static byte[] GetSeeds()
+        private byte[] GetSeeds()
         {
             return oSeeds.SeedXOR.Concat(oSeeds.SeedNotchPlan).Concat(oSeeds.SeedPlugBoard).Concat(oSeeds.SeedReflector).Concat(oSeeds.SeedRotors).Concat(oSeeds.SeedStartPositions).Concat(oSeeds.SeedTurnOverPositions).ToArray();
         }
 
-        private static byte[] GetSettings()
+        private byte[] GetSettings()
         {
             byte[] bRotors = BitConverter.GetBytes(oSettings.MovingCipherRotors);
             byte[] bNotchPlan = BitConverter.GetBytes(Convert.ToInt16(oSettings.NotchPlan));
@@ -453,12 +453,12 @@ namespace StoneAgeEncryptionService
             return bRotors.Concat(bNotchPlan).Concat(bEnigmaMode).Concat(bNoReflectorMode).Concat(bCBCMode).ToArray();
         }
 
-        public static void LoadAll(byte[] b)
+        public void LoadAll(byte[] b)
         {
             int i = 0;
 
             byte[] newArray = b.Skip(i).Take(4).ToArray();
-            oSeeds.SeedXOR= newArray;
+            oSeeds.SeedXOR = newArray;
             i += 4;
 
             newArray = b.Skip(i).Take(4).ToArray();
@@ -502,12 +502,12 @@ namespace StoneAgeEncryptionService
             i += 2;
 
             newArray = b.Skip(i).Take(2).ToArray();
-            oSettings.CBCMode= (CBCMode)BitConverter.ToInt16(newArray, 0);
+            oSettings.CBCMode = (CBCMode)BitConverter.ToInt16(newArray, 0);
 
         }
 
 
-        public static void PopulateSeeds()
+        public void PopulateSeeds()
         {
             RNGCryptoServiceProvider oRNG = new RNGCryptoServiceProvider();
             {
@@ -565,7 +565,7 @@ namespace StoneAgeEncryptionService
             return (byte)iT;
         }
 
-        public static byte[] SecureXOR(byte[] bIn)
+        public byte[] SecureXOR(byte[] bIn, Seeds oSeeds)
         {
             Random oR = new Random(BitConverter.ToInt32(oSeeds.SeedXOR, 0));
             byte[] pad = new byte[bIn.Length];
@@ -573,7 +573,7 @@ namespace StoneAgeEncryptionService
             return XOR(bIn, pad);
         }
 
-        private static byte[] XOR(byte[] bIn, byte[] pad)
+        private byte[] XOR(byte[] bIn, byte[] pad)
         {
             byte[] rtn = new byte[bIn.Length];
             if (pad.Length < bIn.Length)
