@@ -2,9 +2,17 @@
 This is a modern day Enigma machine that can be tested using "Test DLL TomsRotaryCipher1".
 
 # Background
-In 2019 I started a project after seeing videos of the Enigma machine, a state of the art device for the 1900s. I decided to write a more robust version of this using a 256 position byte array; a wheel with 256 slots containing a pseudo random number from 0 to 255. The number of wheels is user-definable, with traditional Enigma and more modern logic to control how the wheels will "spin" and produce ciphertext. One of the last modules I implemented was a replication of the "Sigaba" skipping logic, which was an American adaptation to the German Enigma machine. I found this project enlightening and fun at the time. 
+In 2015 I started a project after seeing videos of the Enigma machine, a state of the art device for the mid 1900s. The project started in VB and was part of a password manager, featuring a virtual "rotary" containing 64 characters and unlimited rotors. I ran a test of approximately 1 million virtual rotors, it worked, but ran for a very long time. At 64 ^ 1,000,000 the message space exceeds the number of atoms in the universe which results in OUT OF RANGE on my Swiss Micros DM42.
 
-After years of letting this project set on the shelf, its time to release it into the wild and see if it ends up manipulating and changing other peoples' personal info. Of course, I will never know it even happened. 
+In 2019, the main engine was re-written in C# as a DLL. The c# version uses a 256 position byte array; a wheel with 256 slots containing a pseudo random number from 0 to 255. The number of wheels is user-definable, with traditional Enigma and more modern logic to control how the wheels will "spin" and produce ciphertext. One of the last modules I implemented was a replication of the "Sigaba" skipping logic, which was an American adaptation to the German Enigma machine. I found this project enlightening and fun at the time. 
+
+After years of letting this project gather dust, its time to release it into the wild and see if it ends up manipulating and changing other peoples' personal info. Of course, I will never know it even happened.
+
+I kept a blog from the programs' inception in 2015 to 2019 when I stopped working on the project. The blog was never published, and documents writing the VB code, my ideas about security, and results of my testing. This blog was more for myself. Although I find it interesting to re-read my thoughts at the time, you may find it resembles "rambling", this is just my writing style:
+
+https://homeitstuff.blogspot.com/
+
+Please note, since the posts were being perpetually edited, and never published, you might end up reading them out of order. Some of the posts are refering to the original VB code with screen shots, and other posts refer to the current c# code.
 
 # Disclaimer
-I tested this program enough to know it works as adverstised. But please understand the limitations if you are going to use this for any real "security". I am a hobbist, not a crytologist. 
+I tested this program enough to know it works as advertised. But please understand the limitations if you are going to use this for any real "security". I am a hobbist, not a crytologist. 
