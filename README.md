@@ -2,7 +2,7 @@
 This is a modern day Enigma machine that can be tested using "Test DLL TomsRotaryCipher1".
 
 # Background
-In 2015 I started a project after seeing videos of the Enigma machine, a state of the art device for the mid 1900s. The project started in VB and was part of a password manager, featuring a virtual "rotary" containing 64 characters and unlimited rotors. I ran a test of approximately 1 million virtual rotors, it worked, but ran for a very long time. At 64 ^ 1,000,000 the message space exceeds the number of atoms in the universe which results in OUT OF RANGE on my Swiss Micros DM42.
+In 2015 I started a project after seeing videos of the Enigma machine, a state of the art device for the mid 1900s. The project started in VB and morphed into a password manager, featuring a virtual "rotary" containing 64 characters and unlimited rotors. I ran a test of approximately 1 million virtual rotors, it worked, but ran for a very long time. At 64 ^ 1,000,000 the message space exceeds the number of atoms in the universe which results in OUT OF RANGE on my Swiss Micros DM42.
 
 In 2019, the main engine was re-written in C# as a DLL. The c# version uses a 256 position byte array; a wheel with 256 slots containing a pseudo random number from 0 to 255. The number of wheels is user-definable, with traditional Enigma and more modern logic to control how the wheels will "spin" and produce ciphertext. One of the last modules I implemented was a replication of the "Sigaba" skipping logic, which was an American adaptation to the German Enigma machine. I found this project enlightening and fun at the time. 
 
