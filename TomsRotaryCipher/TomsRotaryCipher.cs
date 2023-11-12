@@ -156,27 +156,12 @@ namespace StoneAgeEncryptionService
                 Rtn[i] = Transform;
                 TransformLast = Transform;
 
-                if (np.Equals(NotchPlan.Sigaba))
+                // spin rotors based on notch plan
+                for (int r = 1; r <= totalRotors - 2; r++)
                 {
-                    // spin rotors based on notch plan
-                    for (int r = 1; r <= totalRotors - 2; r++)
+                    if (notchTurnoverPlan[i, r - 1].Equals(1))
                     {
-                        if (notchTurnoverPlan[i, r - 1].Equals(1))
-                        {
-                            MoveArrayPointerMainRotors(r, 1, radix, ref eVirtualRotorMove);
-                        }
-                    }
-                }
-                if (np.Equals(NotchPlan.Sequential))
-                {
-                    // spin rotors, notchplan is not needed, creates "out of memory" 
-                    // with a very large number of rotors.
-                    for (int r = 1; r <= totalRotors - 2; r++)
-                    {
-                        if (r.Equals(1))
-                        {
-                            MoveArrayPointerMainRotors(r, 1, radix, ref eVirtualRotorMove);
-                        }
+                        MoveArrayPointerMainRotors(r, 1, radix, ref eVirtualRotorMove);
                     }
                 }
             }

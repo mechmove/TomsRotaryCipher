@@ -104,39 +104,37 @@ namespace RotorSpinPln
 
             if (notchPlan.Equals(NotchPlan.Sequential))
             {
-                return;// no need to have a notch plan if we use regular skipping, this results in overflow anyway, so its a NO GO.
-                
                 // this is the simple odometer skipping found in the original rotor cipher machines:
-                //NotchTurnoverPlan = new int[PlainTxtLen, Rotors];
-                //for (long l = 0; l <= PlainTxtLen - 1; l++)
-                //{
-                //    //increment innermost Rotor (1) all the time:
-                //    // (Note, only Side 1 of double sided rotor moves, 
-                //    // Side 0 always remains constant)
-                //    bool PreviousMaxValue = false;
-                //    NotchTurnoverPlan[l, 0] = (byte)1;
-                //    IncRotorPos(ref eSpinFactor[0], Radix);
+                NotchTurnoverPlan = new int[PlainTxtLen, Rotors];
+                for (long l = 0; l <= PlainTxtLen - 1; l++)
+                {
+                    //increment innermost Rotor (1) all the time:
+                    // (Note, only Side 1 of double sided rotor moves, 
+                    // Side 0 always remains constant)
+                    bool PreviousMaxValue = false;
+                    NotchTurnoverPlan[l, 0] = (byte)1;
+                    IncRotorPos(ref eSpinFactor[0], Radix);
 
-                //    int sFc = (int)eSpinFactor[0];
-                //    if (sFc.Equals(0)) { PreviousMaxValue = true; }
+                    int sFc = (int)eSpinFactor[0];
+                    if (sFc.Equals(0)) { PreviousMaxValue = true; }
 
-                //    // now increment other rotors based on Spin Factor:
-                //    for (int r = 1; r <= eSpinFactor.Length - 1; r++)
-                //    {
-                //        // prior rotor has completed 1 cycle, increment next downstream rotor
-                //        if (eSpinFactor[r - 1].Equals(0) && PreviousMaxValue)
-                //        {// increment this rotor!
-                //            PreviousMaxValue = false;
+                    // now increment other rotors based on Spin Factor:
+                    for (int r = 1; r <= eSpinFactor.Length - 1; r++)
+                    {
+                        // prior rotor has completed 1 cycle, increment next downstream rotor
+                        if (eSpinFactor[r - 1].Equals(0) && PreviousMaxValue)
+                        {// increment this rotor!
+                            PreviousMaxValue = false;
 
-                //            NotchTurnoverPlan[l, r] = (byte)1;
-                //            IncRotorPos(ref eSpinFactor[r], Radix);
+                            NotchTurnoverPlan[l, r] = (byte)1;
+                            IncRotorPos(ref eSpinFactor[r], Radix);
 
-                //            sFc = (int)eSpinFactor[r];
-                //            if (sFc.Equals(0)) { PreviousMaxValue = true; }
-                //        }
-                //    }
+                            sFc = (int)eSpinFactor[r];
+                            if (sFc.Equals(0)) { PreviousMaxValue = true; }
+                        }
+                    }
 
-                //}
+                }
 
 
             }
