@@ -34,7 +34,7 @@ namespace StoneAgeEncryptionService
             public CBCMode CBCMode { get; set; }
         }
 
-        protected static int HighestIteration;// for analysis
+        protected static long HighestIteration;// for analysis
         protected int TotalRotors { get { return 2 + oSettings.MovingCipherRotors; } set { } }  // MovingCipherRotors + 2; // need plugboard and reflector
 
         public Seeds oSeeds = new Seeds();
@@ -156,15 +156,29 @@ namespace StoneAgeEncryptionService
                 Rtn[i] = Transform;
                 TransformLast = Transform;
 
-                // spin rotors based on notch plan
-                for (int r = 1; r <= totalRotors - 2; r++)
+                if (np.Equals(NotchPlan.Sigaba))
                 {
-                    if (notchTurnoverPlan[i, r - 1].Equals(1))
+                    // spin rotors based on notch plan
+                    for (int r = 1; r <= totalRotors - 2; r++)
                     {
-                        MoveArrayPointerMainRotors(r, 1, radix, ref eVirtualRotorMove);
+                        if (notchTurnoverPlan[i, r - 1].Equals(1))
+                        {
+                            MoveArrayPointerMainRotors(r, 1, radix, ref eVirtualRotorMove);
+                        }
                     }
                 }
-
+                if (np.Equals(NotchPlan.Sequential))
+                {
+                    // spin rotors, notchplan is not needed, creates "out of memory" 
+                    // with a very large number of rotors.
+                    for (int r = 1; r <= totalRotors - 2; r++)
+                    {
+                        if (r.Equals(1))
+                        {
+                            MoveArrayPointerMainRotors(r, 1, radix, ref eVirtualRotorMove);
+                        }
+                    }
+                }
             }
             return Rtn;
         }
@@ -326,10 +340,18 @@ namespace StoneAgeEncryptionService
         private void PopulateRotors(ref byte[,,] b, int iSeed, int Radix, int RandomMultiplier, int Rotors, int Sides)
         {
             System.Random oRandom = new System.Random(iSeed);
-
-            int RandomArraySize = (Radix * (Rotors)) * RandomMultiplier;
+            long RandomArraySize = Radix * Rotors * RandomMultiplier;
+            // apparently, max value of byte array is 2,130,702,268 slightly less than 2,147,483,647 for int32
+            if (RandomArraySize>2130702268)
+            {// this won't work, get OUT!
+                string err = "RandomArraySize: " + RandomArraySize.ToString() + " is greater than range of INT!" + Environment.NewLine + Environment.NewLine;
+                System.IO.File.WriteAllText("error.txt", err);
+                Console.WriteLine(err);
+                Console.ReadKey();
+                throw new InvalidOperationException(err);
+            }
             byte[] bNext = new byte[RandomArraySize]; // Need unique numbers only, this is the available pool, larger than required
-            int ArrayCnt = 0;
+            long ArrayCnt = 0;
             oRandom.NextBytes(bNext);
 
 
@@ -359,12 +381,12 @@ namespace StoneAgeEncryptionService
             }
         }
 
-        private byte[] GetUnique(ref int ArrayCnt, byte[] bRandomNums, int Radix, int RandomMultiplier, int RandomArraySize)
+        private byte[] GetUnique(ref long ArrayCnt, byte[] bRandomNums, int Radix, int RandomMultiplier, long RandomArraySize)
         {
             bool ZeroInserted = false;
             byte[] bUnique = new byte[Radix];
             int iCurrentPosUnique = 0;
-            for (int iRandomPos = ArrayCnt; iRandomPos <= RandomArraySize - 1; iRandomPos++)
+            for (long iRandomPos = ArrayCnt; iRandomPos <= RandomArraySize - 1; iRandomPos++)
             {
                 if (!iCurrentPosUnique.Equals(Radix))
                 {
