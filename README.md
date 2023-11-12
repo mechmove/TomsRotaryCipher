@@ -15,7 +15,7 @@ https://homeitstuff.blogspot.com/
 Please note, since the posts were being perpetually edited, you might end up reading them out of order. Some of the posts are refering to the original VB code with screen shots, and other posts refer to the current c# code.
 
 # Change History
-https://homeitstuff.blogspot.com/2023/11/test-1-million-rotors-c-enigma.html
+2024/11/11 https://homeitstuff.blogspot.com/2023/11/test-1-million-rotors-c-enigma.html
 
 # Disclaimer
 I tested this program enough to know it works as advertised. But please understand the limitations if you are going to use this for any real "security". I am a hobbist, not a crytologist. 
