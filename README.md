@@ -15,6 +15,7 @@ https://homeitstuff.blogspot.com/
 Please note, since the posts were being perpetually edited, you might end up reading them out of order. Some of the posts are refering to the original VB code with screen shots, and other posts refer to the current c# code.
 
 # Change History
+2024/11/12 https://homeitstuff.blogspot.com/2023/11/very-large-arrays-in-c.html
 2024/11/11 https://homeitstuff.blogspot.com/2023/11/test-1-million-rotors-c-enigma.html
 
 # Disclaimer
