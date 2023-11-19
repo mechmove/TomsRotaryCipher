@@ -44,63 +44,6 @@ namespace RotorSpinPln
                 }
 
             }
-            //if (notchPlan.Equals(NotchPlan.SigabaEcono_OTP))
-
-            //{ /* SigabaEcono, experimental, 
-                
-            //    THIS OPTION DOES NOT WORK! UNLESS YOU HAVE THE ORIGINAL PLAINTEXT
-                
-            //    this option was designed to keep skipping to a minimum, skip only 
-            //    if last char = current char, or wait until 255 notches have traversed. In theory this 
-            //    could expand message space and vastly increase run-time.
-               
-            //    My test indicates this option reduces runtime by a factor of 2.
-
-            //    So this is the best of Sigaba multi-rotor skipping, and intelligent skipping, 
-            //    only if needed.
-                 
-            //     */
-
-            //    long TotalCombinations = Rotors;
-            //    for (int i = 2; i < Rotors; i++)
-            //    {
-            //        TotalCombinations += Supportg.PermutationsAndCombinations.nCr(Rotors, i);
-            //    }
-
-            //    Random r = new Random(SeedNotchTurnover);
-            //    NotchTurnoverPlan = new int[PlainTxtLen, Rotors];
-
-            //    int SkipFactor = Radix-1;
-            //    int SkipIncrem = 0;
-            //    // todo, need to add logic to skip if previous char = current char
-            //    byte PreviousChar = new byte();
-            //    byte CurrentChar = new byte();
-            //    for (long l = 0; l <= PlainTxtLen - 1; l++)
-            //    {
-            //        CurrentChar = PlainTxt[l];
-            //        if (CurrentChar.Equals(PreviousChar)||(l.Equals(0)))
-            //        {
-            //            SkipIncrem = SkipFactor-1;
-            //        }
-
-            //        SkipIncrem++;
-            //        if (SkipIncrem.Equals(SkipFactor))
-            //        {
-            //            SkipIncrem = 0;
-            //            int Rand = r.Next(1, (int)TotalCombinations + 1); // get random number between 1 and TotalCombinations
-            //                                                              //Console.Write(Convert.ToString(Rand) + Environment.NewLine) ;
-            //            string bRandStr = Convert.ToString(Rand, 2); // convert to binary string
-            //            for (int i = bRandStr.Length - 1; i >= 0; i--) // populate array for each character
-            //            {
-            //                NotchTurnoverPlan[l, bRandStr.Length - i - 1] = Convert.ToInt16(bRandStr.Substring(i, 1));
-            //            }
-            //        }
-            //        PreviousChar = CurrentChar;
-            //    }
-
-            //}
-
-
 
             if (notchPlan.Equals(NotchPlan.Sequential))
             {

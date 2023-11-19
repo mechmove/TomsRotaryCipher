@@ -9,7 +9,7 @@ namespace StoneAgeEncryptionService
 {
     public enum EnigmaMode { WithReflector, NoReflector }
     public enum NoReflectorMode { None, Forward, Reverse }
-    public enum NotchPlan { Sequential, Sigaba, SigabaEcono_OTP }
+    public enum NotchPlan { Sequential, Sigaba}
     public enum CBCMode { None, Forward, Reverse }
 
     public class TomsRotaryCipher
@@ -325,21 +325,8 @@ namespace StoneAgeEncryptionService
         private void PopulateRotors(ref byte[,,] b, int iSeed, int Radix, int RandomMultiplier, int Rotors, int Sides)
         {
             System.Random oRandom = new System.Random(iSeed);
-            long RandomArraySize = Radix * Rotors * RandomMultiplier;
-            // apparently, max value of byte array is 2,130,702,268 slightly less than 2,147,483,647 for int32
-            if (RandomArraySize>2130702268)
-            {// this won't work, get OUT!
-                string err = "RandomArraySize: " + RandomArraySize.ToString() + " is greater than range of INT!" + Environment.NewLine + Environment.NewLine;
-                System.IO.File.WriteAllText("error.txt", err);
-                Console.WriteLine(err);
-                Console.ReadKey();
-                throw new InvalidOperationException(err);
-            }
+            long RandomArraySize = Radix * RandomMultiplier;
             byte[] bNext = new byte[RandomArraySize]; // Need unique numbers only, this is the available pool, larger than required
-            long ArrayCnt = 0;
-            oRandom.NextBytes(bNext);
-
-
             for (int iRotor = 0; iRotor <= Rotors - 1; iRotor++)
             {
                 for (int iSide = 0; iSide <= (Sides - 1); iSide++)
@@ -354,7 +341,8 @@ namespace StoneAgeEncryptionService
                     { }
                     else
                     {
-                        byte[] bUnique = GetUnique(ref ArrayCnt, bNext, Radix, RandomMultiplier, RandomArraySize);
+                        oRandom.NextBytes(bNext);
+                        byte[] bUnique = GetUnique(bNext, Radix, RandomMultiplier, RandomArraySize);
                         for (int iBinaryPos = 0; iBinaryPos <= Radix - 1; iBinaryPos++)
                         {
                             b[iRotor, iSide, iBinaryPos] = bUnique[iBinaryPos];
@@ -366,12 +354,12 @@ namespace StoneAgeEncryptionService
             }
         }
 
-        private byte[] GetUnique(ref long ArrayCnt, byte[] bRandomNums, int Radix, int RandomMultiplier, long RandomArraySize)
+        private byte[] GetUnique(byte[] bRandomNums, int Radix, int RandomMultiplier, long RandomArraySize)
         {
             bool ZeroInserted = false;
             byte[] bUnique = new byte[Radix];
             int iCurrentPosUnique = 0;
-            for (long iRandomPos = ArrayCnt; iRandomPos <= RandomArraySize - 1; iRandomPos++)
+            for (long iRandomPos = 0; iRandomPos <= RandomArraySize - 1; iRandomPos++)
             {
                 if (!iCurrentPosUnique.Equals(Radix))
                 {
@@ -379,7 +367,6 @@ namespace StoneAgeEncryptionService
                 }
                 else
                 {
-                    ArrayCnt = iRandomPos;
                     if (iRandomPos > HighestIteration) // for Analysis
                     {
                         HighestIteration = iRandomPos;
