@@ -16,6 +16,8 @@ Please note, since the posts were being perpetually edited, you might end up rea
 
 # Change History
 
+2024/11/24 https://homeitstuff.blogspot.com/2023/11/new-test-functions.html
+
 2024/11/19 https://homeitstuff.blogspot.com/2023/11/todays-changes.html
 
 2024/11/12 https://homeitstuff.blogspot.com/2023/11/very-large-arrays-in-c.html
