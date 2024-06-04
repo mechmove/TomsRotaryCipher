@@ -8,7 +8,7 @@ In 2019, the main engine was re-written in C# as a DLL. The c# version uses a 25
 
 After years of letting this project gather dust, its time to release it into the wild and see if it ends up manipulating and changing other peoples' personal info. Of course, I will never know it even happened.
 
-I kept a blog from the programs' inception in 2015 to 2019 when I stopped working on the project. The blog was never published, and details how I wrote code, my ideas about security, and what I learned while testing. It is amazing how much you can learn by throughly testing something like this! This blog was more for myself rather than public consumption, but I intented to release code back then, it just took a while:
+I kept a blog from the programs' inception in 2015 to 2019 when I stopped working on the project. The blog was never published, and details how I wrote code, my ideas about security, and what I learned while testing. This blog was more for myself rather than public consumption, but I intented to release code back then, it just took a while:
 
 https://homeitstuff.blogspot.com/
 
