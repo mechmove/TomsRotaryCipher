@@ -16,7 +16,7 @@ Please note, since the posts were being perpetually edited, you might end up rea
 
 # Change History
 
-2024/12/12 https://homeitstuff.blogspot.com/2024/12/major-bug-fix.html?zx=f00e9515ee870266
+2024/12/12 https://homeitstuff.blogspot.com/2024/12/major-bug-fix.html
 
 2023/11/24 https://homeitstuff.blogspot.com/2023/11/new-test-functions.html
 
