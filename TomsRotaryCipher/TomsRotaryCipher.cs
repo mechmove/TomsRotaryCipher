@@ -8,7 +8,7 @@ using System.Security.Cryptography;
 namespace StoneAgeEncryptionService
 {
     public enum EnigmaMode { WithReflector, NoReflector }
-    public enum NoReflectorMode { None, Forward, Reverse }
+    public enum NoReflectorMode { None, Encipher, Decipher}
     public enum NotchPlan { Sequential, Sigaba}
     public enum CBCMode { None, Forward, Reverse }
 
@@ -53,6 +53,11 @@ namespace StoneAgeEncryptionService
             if (oSeeds.SeedNotchPlan is null)
             {
                 throw new Exception("Please PopulateSeeds or LoadAll!");
+            }
+
+            if (em.Equals(EnigmaMode.NoReflector)&& nrm.Equals(NoReflectorMode.None))
+            {
+                throw new Exception("If EnigmaMode = NoReflector, NoReflectorMode cannot be None. Select Encipher or Decipher!");
             }
 
             oSettings.CBCMode = cm;
@@ -122,7 +127,7 @@ namespace StoneAgeEncryptionService
                 }
                 else
                 {
-                    if (nrm.Equals(NoReflectorMode.Forward))
+                    if (nrm.Equals(NoReflectorMode.Encipher))
                     {
                         // take it through PlugBoard, all rotors
                         for (int r = 0; r <= totalRotors - 2; r++)
@@ -130,7 +135,7 @@ namespace StoneAgeEncryptionService
                             Transform = ByteLookup(Transform, r, radix, totalRotors, e, eVirtualRotorMove);
                         }
                     }
-                    if (nrm.Equals(NoReflectorMode.Reverse))
+                    if (nrm.Equals(NoReflectorMode.Decipher))
                     {
                         // now backwards through rotors and plugboard
                         for (int r = totalRotors - 2; r >= 0; r--)
@@ -517,14 +522,14 @@ namespace StoneAgeEncryptionService
 
         public NoReflectorMode GetCorrectDecodeOpt(NoReflectorMode TargetNode)
         {
-            if (oSettings.NoReflectorMode.Equals(NoReflectorMode.Reverse))
+            if (oSettings.NoReflectorMode.Equals(NoReflectorMode.Decipher))
             {
-                return NoReflectorMode.Forward;
+                return NoReflectorMode.Encipher;
             }
 
-            if (oSettings.NoReflectorMode.Equals(NoReflectorMode.Forward))
+            if (oSettings.NoReflectorMode.Equals(NoReflectorMode.Encipher))
             {
-                return NoReflectorMode.Reverse;
+                return NoReflectorMode.Decipher;
             }
 
             return TargetNode;
