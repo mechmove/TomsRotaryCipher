@@ -45,5 +45,8 @@
     <Compile Include="Supporting.cs" />
     <Compile Include="TomsRotaryCipher.cs" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="True security of TomsRotaryCipher during a bruteforce attack.doc" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
