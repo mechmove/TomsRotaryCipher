@@ -548,7 +548,8 @@ namespace StoneAgeEncryptionService
             // we could just use oRNG.GetBytes, but I'd rather take it
             // a step further and introduce more logic to faciliate
             // a unique combination of numbers.
-            RNGCryptoServiceProvider oRNG = new RNGCryptoServiceProvider();
+            RNGCryptoServiceProvider oRNG1 = new RNGCryptoServiceProvider();
+            RNGCryptoServiceProvider oRNG2 = new RNGCryptoServiceProvider();
             {
                 int TotalRotors = oSettings.MovingCipherRotors * 4;
                 TotalRotors += 16; // 4 additional keys are required
@@ -557,10 +558,10 @@ namespace StoneAgeEncryptionService
                 byte[] bR1 = new byte[TotalRotors];
                 byte[] bR2 = new byte[TotalRotors];
 
-                oRNG.GetBytes(bR1);
+                oRNG1.GetBytes(bR1);
                 QuantumShuffle(ref bR1);// bR needs to be scrambled to ensure values are more unique than off-the-shelf
 
-                oRNG.GetBytes(bR2);
+                oRNG2.GetBytes(bR2);
                 QuantumShuffle(ref bR2);// bR needs to be scrambled to ensure values are more unique than off-the-shelf
 
                 oSeeds.SeedIndividualRotors = XOR(bR1, bR2);// the final "shuffle" will be an XOR
@@ -590,11 +591,15 @@ namespace StoneAgeEncryptionService
             //
             // "True Randomness" is another rabbit hole to explore
 
-            RNGCryptoServiceProvider oRNG = new RNGCryptoServiceProvider();
-            Int32 iStartSwap = BitConverter.ToInt32(GetNxt(oRNG), 0);
-            Int32 iEndSwap = BitConverter.ToInt32(GetNxt(oRNG), 0);
-            Int32 iDice = BitConverter.ToInt32(GetNxt(oRNG), 0);
-            Int32 iChance = BitConverter.ToInt32(GetNxt(oRNG), 0);
+            RNGCryptoServiceProvider oRNGStartSwap = new RNGCryptoServiceProvider();
+            RNGCryptoServiceProvider oRNGEndSwap = new RNGCryptoServiceProvider();
+            RNGCryptoServiceProvider oRNGDice = new RNGCryptoServiceProvider();
+            RNGCryptoServiceProvider oRNGChance = new RNGCryptoServiceProvider();
+
+            Int32 iStartSwap = BitConverter.ToInt32(GetNxt(oRNGStartSwap), 0);
+            Int32 iEndSwap = BitConverter.ToInt32(GetNxt(oRNGEndSwap), 0);
+            Int32 iDice = BitConverter.ToInt32(GetNxt(oRNGDice), 0);
+            Int32 iChance = BitConverter.ToInt32(GetNxt(oRNGChance), 0);
 
             Random rStartSwap = new Random(iStartSwap);
             Random rEndSwap = new Random(iEndSwap);
@@ -704,6 +709,14 @@ namespace StoneAgeEncryptionService
         {
             byte[] bR = new byte[4];
             oRNG.GetBytes(bR);
+            Int32 iDice = BitConverter.ToInt32(bR, 0);
+            Random rDice = new Random(iDice);
+            // roll the dice up to 7 X to populate bR
+            int ThrowDiceXTimes = rDice.Next(1, 7 + 1); 
+            for (int j = 0; j < ThrowDiceXTimes; j++)
+            {
+                oRNG.GetBytes(bR);
+            }
             return bR;
         }
 
