@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Security.Cryptography;
+using System.CodeDom.Compiler;
 
 namespace StoneAgeEncryptionService
 {
@@ -18,6 +19,7 @@ namespace StoneAgeEncryptionService
         {
             public byte[] SeedXOR { get; set; }
             public byte[] SeedRotors { get; set; }
+            public byte[] SeedIndividualRotors { get; set; }
             public byte[] SeedNotchPlan { get; set; }
             public byte[] SeedTurnOverPositions { get; set; }
             public byte[] SeedStartPositions { get; set; }
@@ -34,6 +36,12 @@ namespace StoneAgeEncryptionService
             public CBCMode CBCMode { get; set; }
         }
 
+        public void SetMovingCipherRotors(int Rotors)
+        {
+            oSettings.MovingCipherRotors = Rotors;
+            PopulateIndividualRotorSeeds();
+        }
+
         protected static long HighestIteration;// for analysis
         protected int TotalRotors { get { return 2 + oSettings.MovingCipherRotors; } set { } }  // MovingCipherRotors + 2; // need plugboard and reflector
 
@@ -45,7 +53,6 @@ namespace StoneAgeEncryptionService
             NoReflectorMode nrm,
             CBCMode cm = CBCMode.None)
         {
-
             const int sides = 2;
             const int radix = 256;
             const int randomMultiplier = 20;
@@ -65,7 +72,7 @@ namespace StoneAgeEncryptionService
             int movingCipherRotors = oSettings.MovingCipherRotors;
 
             byte[,,] e = CreateMachine(TotalRotors, sides, radix);
-            PopulateRotors(ref e, BitConverter.ToInt32(oSeeds.SeedRotors, 0), radix, randomMultiplier, TotalRotors, sides);
+            PopulateRotors(ref e, BitConverter.ToInt32(oSeeds.SeedRotors, 0), radix, randomMultiplier, TotalRotors, sides,true);
 
             // make a local copy for speed optimization
             byte[] eSpinFactor = new byte[TotalRotors - 2];
@@ -327,8 +334,23 @@ namespace StoneAgeEncryptionService
             byte[,,] e = new byte[numRotors, Sides, Radix];
             return e;
         }
-        private void PopulateRotors(ref byte[,,] b, int iSeed, int Radix, int RandomMultiplier, int Rotors, int Sides)
+
+        private void PopulateNewSeedForRotors (ref byte[] newSeed, byte[] SeedRotors, int Start)
         {
+            newSeed[0] = SeedRotors[Start];
+            Start++;
+            newSeed[1] = SeedRotors[Start];
+            Start++;
+            newSeed[2] = SeedRotors[Start];
+            Start++;
+            newSeed[3] = SeedRotors[Start];
+
+        }
+        private void PopulateRotors(ref byte[,,] b, int iSeed, int Radix, int RandomMultiplier, int Rotors, int Sides, bool MainRotorCreation =false)
+        { // for Main Rotor Creation
+            byte[] newSeed = new byte[4];
+            int RotorSeedArrayStart = -4; // inc by 4 to traverse the Rotor Seed Array
+
             System.Random oRandom = new System.Random(iSeed);
             long RandomArraySize = Radix * RandomMultiplier;
             byte[] bNext = new byte[RandomArraySize]; // Need unique numbers only, this is the available pool, larger than required
@@ -346,7 +368,18 @@ namespace StoneAgeEncryptionService
                     { }
                     else
                     {
-                        oRandom.NextBytes(bNext);
+                        if (MainRotorCreation.Equals(true))
+                        {// we need to re-seed each rotor with stored 4 byte number
+                            RotorSeedArrayStart += 4;
+                            PopulateNewSeedForRotors(ref newSeed, oSeeds.SeedIndividualRotors, RotorSeedArrayStart);
+                            oRandom = new System.Random(BitConverter.ToInt32(newSeed, 0));
+                            oRandom.NextBytes(bNext);
+
+                        } else
+                        {
+                            oRandom.NextBytes(bNext);
+                        }
+
                         byte[] bUnique = GetUnique(bNext, Radix, RandomMultiplier, RandomArraySize);
                         for (int iBinaryPos = 0; iBinaryPos <= Radix - 1; iBinaryPos++)
                         {
@@ -449,7 +482,8 @@ namespace StoneAgeEncryptionService
             byte[] bEnigmaMode = BitConverter.GetBytes(Convert.ToInt16(oSettings.EnigmaMode));
             byte[] bNoReflectorMode = BitConverter.GetBytes(Convert.ToInt16(oSettings.NoReflectorMode));
             byte[] bCBCMode = BitConverter.GetBytes(Convert.ToInt16(oSettings.CBCMode));
-            return bRotors.Concat(bNotchPlan).Concat(bEnigmaMode).Concat(bNoReflectorMode).Concat(bCBCMode).ToArray();
+            byte[] bRotorsHS = oSeeds.SeedIndividualRotors;
+            return bRotors.Concat(bNotchPlan).Concat(bEnigmaMode).Concat(bNoReflectorMode).Concat(bCBCMode).Concat(bRotorsHS).ToArray();
         }
 
         public void LoadAll(byte[] b)
@@ -502,22 +536,131 @@ namespace StoneAgeEncryptionService
 
             newArray = b.Skip(i).Take(2).ToArray();
             oSettings.CBCMode = (CBCMode)BitConverter.ToInt16(newArray, 0);
+            i += 2;
 
+            int RotorSeedsHS = b.Length - i;
+            newArray = b.Skip(i).Take(RotorSeedsHS).ToArray();
+            oSeeds.SeedIndividualRotors = newArray;
         }
 
+        public void PopulateIndividualRotorSeeds()
+        {   // this routine is to a obtain a 4-byte seed for each rotor
+            // we could just use oRNG.GetBytes, but I'd rather take it
+            // a step further and introduce more logic to faciliate
+            // a unique combination of numbers.
+            RNGCryptoServiceProvider oRNG = new RNGCryptoServiceProvider();
+            {
+                int TotalRotors = oSettings.MovingCipherRotors * 4;
+                TotalRotors += 16; // 4 additional keys are required
+                oSeeds.SeedIndividualRotors = new byte[TotalRotors];
+
+                byte[] bR1 = new byte[TotalRotors];
+                byte[] bR2 = new byte[TotalRotors];
+
+                oRNG.GetBytes(bR1);
+                QuantumShuffle(ref bR1);// bR needs to be scrambled to ensure values are more unique than off-the-shelf
+
+                oRNG.GetBytes(bR2);
+                QuantumShuffle(ref bR2);// bR needs to be scrambled to ensure values are more unique than off-the-shelf
+
+                oSeeds.SeedIndividualRotors = XOR(bR1, bR2);// the final "shuffle" will be an XOR
+            }
+        }
+
+        private void QuantumShuffle(ref byte[] b)
+        {// There is a 50% chance of exchanging data between the top and bottom halves of b[]
+
+            // my notes:
+            // 1) there are some programming oddities involving r.Next() and min/max values, see the code.
+
+            // 2) Random() is either time dependant (default), OR can accept an
+            // integer seed value between 0 to 2_147_483_647.
+            // Negative values will be converted to positive, relevant when using 
+            // RNGCryptoServiceProvider.GetBytes()
+
+            // it turns out forcing a seed is less likely to result in a collision
+            // than using default time, which is more prone to collisions.
+            // This is based on my quick testing. Neither are a good options,
+            // they are either buggy (time),or limited (since when is Int32 "secure"?)
+
+            // In order to enforce a unique number, a seed could be a hash of time,
+            // hardware signature, and process ID (different instances of the same
+            // running program should have different process IDs), but those are only
+            // my preliminary ideas.
+            //
+            // "True Randomness" is another rabbit hole to explore
+
+            RNGCryptoServiceProvider oRNG = new RNGCryptoServiceProvider();
+            Int32 Int32NotStrongEnough = BitConverter.ToInt32(GetNxt(oRNG), 0);
+            Random r = new Random(Int32NotStrongEnough); 
+                                                         
+            int start = 0;
+            int mid = b.Length / 2;
+            int end = b.Length;
+            int StartToSwap;
+            int EndToSwap;
+            int Chance=1;
+            int bStart;
+            int bEnd;
+            for (int i=0;i< end; i++) // 100% of all data can be exchanged.
+            {
+                //Programming note, r.Next does not behave the way you think it should,
+                //add +1 to max value for a possible rtn if it is not a 0-based array
+
+                //get a random location between start and mid
+                StartToSwap = r.Next(start, mid);
+                // get a random location between mid and end
+                EndToSwap = r.Next(mid, end);
+                // roll the dice up to 3 X to see if an exchange actually takes place
+                int ThrowDiceXTimes= r.Next(1, 3 + 1); // this looks confusing, but makes sense
+                                                       // if not an array reference, see above
+                for (int j=0; j < ThrowDiceXTimes; j++)
+                {
+                    Chance = r.Next(1, 100 + 1); // same comment as above, we want a number between 1 and 100
+                }
+
+                if (Chance>50)// 50% chance of an exchange, no bribes will be accepted.
+                {// now switch locations
+                    bStart = b[StartToSwap];
+                    bEnd = b[EndToSwap];
+                    b[StartToSwap] = Convert.ToByte(bEnd);
+                    b[EndToSwap] = Convert.ToByte(bStart);
+                }
+            }
+        }
 
         public void PopulateSeeds()
         {
             RNGCryptoServiceProvider oRNG = new RNGCryptoServiceProvider();
             {
-                oSeeds.SeedXOR = GetNxt(oRNG);
-                oSeeds.SeedNotchPlan = GetNxt(oRNG);
-                oSeeds.SeedPlugBoard = GetNxt(oRNG);
-                oSeeds.SeedReflector = GetNxt(oRNG);
-                oSeeds.SeedRotors = GetNxt(oRNG);
-                oSeeds.SeedStartPositions = GetNxt(oRNG);
-                oSeeds.SeedTurnOverPositions = GetNxt(oRNG);
-            };
+                byte[] b = GetNxt(oRNG);
+                QuantumShuffle(ref b);
+                oSeeds.SeedXOR = b;
+
+                b = GetNxt(oRNG);
+                QuantumShuffle(ref b);
+                oSeeds.SeedNotchPlan = b;
+
+                b = GetNxt(oRNG);
+                QuantumShuffle(ref b);
+                oSeeds.SeedPlugBoard = b;
+
+                b = GetNxt(oRNG);
+                QuantumShuffle(ref b);
+                oSeeds.SeedReflector = b;
+
+                b = GetNxt(oRNG);
+                QuantumShuffle(ref b);
+                oSeeds.SeedRotors = b;
+
+                b = GetNxt(oRNG);
+                QuantumShuffle(ref b);
+                oSeeds.SeedStartPositions = b;
+
+                b = GetNxt(oRNG);
+                QuantumShuffle(ref b);
+                oSeeds.SeedTurnOverPositions = b;
+            }
         }
 
         public NoReflectorMode GetCorrectDecodeOpt(NoReflectorMode TargetNode)
@@ -571,7 +714,6 @@ namespace StoneAgeEncryptionService
             oR.NextBytes(pad);
             return XOR(bIn, pad);
         }
-
         private byte[] XOR(byte[] bIn, byte[] pad)
         {
             byte[] rtn = new byte[bIn.Length];
