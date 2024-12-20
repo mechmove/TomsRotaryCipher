@@ -548,7 +548,8 @@ namespace StoneAgeEncryptionService
             // we could just use oRNG.GetBytes, but I'd rather take it
             // a step further and introduce more logic to faciliate
             // a unique combination of numbers.
-            RNGCryptoServiceProvider oRNG = new RNGCryptoServiceProvider();
+            RNGCryptoServiceProvider oRNG1 = new RNGCryptoServiceProvider();
+            RNGCryptoServiceProvider oRNG2 = new RNGCryptoServiceProvider();
             {
                 int TotalRotors = oSettings.MovingCipherRotors * 4;
                 TotalRotors += 16; // 4 additional keys are required
@@ -557,10 +558,10 @@ namespace StoneAgeEncryptionService
                 byte[] bR1 = new byte[TotalRotors];
                 byte[] bR2 = new byte[TotalRotors];
 
-                oRNG.GetBytes(bR1);
+                oRNG1.GetBytes(bR1);
                 QuantumShuffle(ref bR1);// bR needs to be scrambled to ensure values are more unique than off-the-shelf
 
-                oRNG.GetBytes(bR2);
+                oRNG2.GetBytes(bR2);
                 QuantumShuffle(ref bR2);// bR needs to be scrambled to ensure values are more unique than off-the-shelf
 
                 oSeeds.SeedIndividualRotors = XOR(bR1, bR2);// the final "shuffle" will be an XOR
@@ -590,36 +591,47 @@ namespace StoneAgeEncryptionService
             //
             // "True Randomness" is another rabbit hole to explore
 
-            RNGCryptoServiceProvider oRNG = new RNGCryptoServiceProvider();
-            Int32 Int32NotStrongEnough = BitConverter.ToInt32(GetNxt(oRNG), 0);
-            Random r = new Random(Int32NotStrongEnough); 
-                                                         
+            RNGCryptoServiceProvider oRNGStartSwap = new RNGCryptoServiceProvider();
+            RNGCryptoServiceProvider oRNGEndSwap = new RNGCryptoServiceProvider();
+            RNGCryptoServiceProvider oRNGDice = new RNGCryptoServiceProvider();
+            RNGCryptoServiceProvider oRNGChance = new RNGCryptoServiceProvider();
+
+            Int32 iStartSwap = BitConverter.ToInt32(GetNxt(oRNGStartSwap), 0);
+            Int32 iEndSwap = BitConverter.ToInt32(GetNxt(oRNGEndSwap), 0);
+            Int32 iDice = BitConverter.ToInt32(GetNxt(oRNGDice), 0);
+            Int32 iChance = BitConverter.ToInt32(GetNxt(oRNGChance), 0);
+
+            Random rStartSwap = new Random(iStartSwap);
+            Random rEndSwap = new Random(iEndSwap);
+            Random rDice = new Random(iDice);
+            Random rChance = new Random(iChance);
+
             int start = 0;
             int mid = b.Length / 2;
             int end = b.Length;
             int StartToSwap;
             int EndToSwap;
-            int Chance=1;
+            int Chance = 1;
             int bStart;
             int bEnd;
-            for (int i=0;i< end; i++) // 100% of all data can be exchanged.
+            for (int i = 0; i < end; i++) // 100% of all data can be exchanged.
             {
                 //Programming note, r.Next does not behave the way you think it should,
                 //add +1 to max value for a possible rtn if it is not a 0-based array
 
                 //get a random location between start and mid
-                StartToSwap = r.Next(start, mid);
+                StartToSwap = rStartSwap.Next(start, mid);
                 // get a random location between mid and end
-                EndToSwap = r.Next(mid, end);
+                EndToSwap = rEndSwap.Next(mid, end);
                 // roll the dice up to 3 X to see if an exchange actually takes place
-                int ThrowDiceXTimes= r.Next(1, 3 + 1); // this looks confusing, but makes sense
-                                                       // if not an array reference, see above
-                for (int j=0; j < ThrowDiceXTimes; j++)
+                int ThrowDiceXTimes = rDice.Next(1, 3 + 1); // this looks confusing, but makes sense
+                                                            // if not an array reference, see above
+                for (int j = 0; j < ThrowDiceXTimes; j++)
                 {
-                    Chance = r.Next(1, 100 + 1); // same comment as above, we want a number between 1 and 100
+                    Chance = rChance.Next(1, 100 + 1); // same comment as above, we want a number between 1 and 100
                 }
 
-                if (Chance>50)// 50% chance of an exchange, no bribes will be accepted.
+                if (Chance > 50)// 50% chance of an exchange, no bribes will be accepted.
                 {// now switch locations
                     bStart = b[StartToSwap];
                     bEnd = b[EndToSwap];
@@ -697,6 +709,14 @@ namespace StoneAgeEncryptionService
         {
             byte[] bR = new byte[4];
             oRNG.GetBytes(bR);
+            Int32 iDice = BitConverter.ToInt32(bR, 0);
+            Random rDice = new Random(iDice);
+            // roll the dice up to 7 X to populate bR
+            int ThrowDiceXTimes = rDice.Next(1, 7 + 1); 
+            for (int j = 0; j < ThrowDiceXTimes; j++)
+            {
+                oRNG.GetBytes(bR);
+            }
             return bR;
         }
 
