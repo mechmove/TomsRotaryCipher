@@ -8,9 +8,26 @@ using System.CodeDom.Compiler;
 
 namespace StoneAgeEncryptionService
 {
-    public enum EnigmaMode { WithReflector, NoReflector }
+    //Trademark Notices/Disclaimer:
+
+    //TomsRotaryCipher is a c# encryption/decryption DLL that belongs to namespace StoneAgeEncryptionService.
+    //The source code is offered in GitHub under the MIT license. There are no guarantees the compiled DLL will
+    //perform per specification or to anyone's expectations. 
+
+    //Sigaba (Trademarked) was the original rotor skipping hardware of the 1950s comprising of index and control
+    //rotors that facilitated a pseudo random skipping pattern of the primary cipher rotors. This idea serves as
+    //inspiration for HopScotch, which is done in software, and may not be an accurate representation of the
+    //original hardware implementation. There is no association, professional or otherwise, between Sigaba and HopScotch.
+
+    //The German Enigma (Trademarked), was a commercially made encryption machine invented by German engineer
+    //Arthur Scherbius in the late-1910s. This machine serves as inspiration for TomsRotaryCipher, which is done in software,
+    //and may not be an accurate representation of the original hardware implementation. There is no association,
+    //professional or otherwise, between Enigma and TomsRotaryCipher.
+
+
+    public enum RotaryCipherMode { WithReflector, NoReflector }
     public enum NoReflectorMode { None, Encipher, Decipher}
-    public enum NotchPlan { Sequential, Sigaba}
+    public enum NotchPlan { Sequential, HopScotch}
     public enum CBCMode { None, Forward, Reverse }
 
     public class TomsRotaryCipher
@@ -31,7 +48,7 @@ namespace StoneAgeEncryptionService
         {
             public int MovingCipherRotors { get; set; }
             public NotchPlan NotchPlan { get; set; }
-            public EnigmaMode EnigmaMode { get; set; }
+            public RotaryCipherMode RotaryCipherMode { get; set; }
             public NoReflectorMode NoReflectorMode { get; set; }
             public CBCMode CBCMode { get; set; }
         }
@@ -49,7 +66,7 @@ namespace StoneAgeEncryptionService
         public Settings oSettings = new Settings();
 
         public byte[] SAES(NotchPlan np, byte[] UserStr,
-            EnigmaMode em,
+            RotaryCipherMode em,
             NoReflectorMode nrm,
             CBCMode cm = CBCMode.None)
         {
@@ -62,9 +79,9 @@ namespace StoneAgeEncryptionService
                 throw new Exception("Please PopulateSeeds or LoadAll!");
             }
 
-            if (em.Equals(EnigmaMode.NoReflector)&& nrm.Equals(NoReflectorMode.None))
+            if (em.Equals(RotaryCipherMode.NoReflector)&& nrm.Equals(NoReflectorMode.None))
             {
-                throw new Exception("If EnigmaMode = NoReflector, NoReflectorMode cannot be None. Select Encipher or Decipher!");
+                throw new Exception("If RotaryCipherMode = NoReflector, NoReflectorMode cannot be None. Select Encipher or Decipher!");
             }
 
             oSettings.CBCMode = cm;
@@ -91,7 +108,7 @@ namespace StoneAgeEncryptionService
             CreateReflector(ref e, BitConverter.ToInt32(oSeeds.SeedReflector, 0), radix, randomMultiplier);
 
             oSettings.MovingCipherRotors = movingCipherRotors;
-            oSettings.EnigmaMode = em;
+            oSettings.RotaryCipherMode = em;
             oSettings.NoReflectorMode = nrm;
 
             // make a local copy of property for speed optimization
@@ -118,7 +135,7 @@ namespace StoneAgeEncryptionService
                     Transform = XOR(Transform, TransformLast);
                 }
 
-                if (em.Equals(EnigmaMode.WithReflector))
+                if (em.Equals(RotaryCipherMode.WithReflector))
                 {
                     // take it through PlugBoard, all rotors, and  reflector
                     for (int r = 0; r <= totalRotors - 1; r++)
@@ -479,11 +496,11 @@ namespace StoneAgeEncryptionService
         {
             byte[] bRotors = BitConverter.GetBytes(oSettings.MovingCipherRotors);
             byte[] bNotchPlan = BitConverter.GetBytes(Convert.ToInt16(oSettings.NotchPlan));
-            byte[] bEnigmaMode = BitConverter.GetBytes(Convert.ToInt16(oSettings.EnigmaMode));
+            byte[] bRotaryCipherMode= BitConverter.GetBytes(Convert.ToInt16(oSettings.RotaryCipherMode));
             byte[] bNoReflectorMode = BitConverter.GetBytes(Convert.ToInt16(oSettings.NoReflectorMode));
             byte[] bCBCMode = BitConverter.GetBytes(Convert.ToInt16(oSettings.CBCMode));
             byte[] bRotorsHS = oSeeds.SeedIndividualRotors;
-            return bRotors.Concat(bNotchPlan).Concat(bEnigmaMode).Concat(bNoReflectorMode).Concat(bCBCMode).Concat(bRotorsHS).ToArray();
+            return bRotors.Concat(bNotchPlan).Concat(bRotaryCipherMode).Concat(bNoReflectorMode).Concat(bCBCMode).Concat(bRotorsHS).ToArray();
         }
 
         public void LoadAll(byte[] b)
@@ -527,7 +544,7 @@ namespace StoneAgeEncryptionService
             i += 2;
 
             newArray = b.Skip(i).Take(2).ToArray();
-            oSettings.EnigmaMode = (EnigmaMode)BitConverter.ToInt16(newArray, 0);
+            oSettings.RotaryCipherMode = (RotaryCipherMode)BitConverter.ToInt16(newArray, 0);
             i += 2;
 
             newArray = b.Skip(i).Take(2).ToArray();
@@ -565,6 +582,10 @@ namespace StoneAgeEncryptionService
                 QuantumShuffle(ref bR2);// bR needs to be scrambled to ensure values are more unique than off-the-shelf
 
                 oSeeds.SeedIndividualRotors = XOR(bR1, bR2);// the final "shuffle" will be an XOR
+
+                oRNG1.Dispose();
+                oRNG2.Dispose();
+
             }
         }
 
@@ -639,6 +660,11 @@ namespace StoneAgeEncryptionService
                     b[EndToSwap] = Convert.ToByte(bStart);
                 }
             }
+
+            oRNGStartSwap.Dispose();
+            oRNGEndSwap.Dispose();
+            oRNGDice.Dispose();
+            oRNGChance.Dispose();
         }
 
         public void PopulateSeeds()
@@ -672,6 +698,8 @@ namespace StoneAgeEncryptionService
                 b = GetNxt(oRNG);
                 QuantumShuffle(ref b);
                 oSeeds.SeedTurnOverPositions = b;
+
+                oRNG.Dispose();
             }
         }
 
