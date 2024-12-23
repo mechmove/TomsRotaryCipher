@@ -8,16 +8,12 @@ using StoneAgeEncryptionService;
 namespace RotorSpinPln
 {
     class RotorSpinPlan
-    {
-
-        public void GetNotchPlan(NotchPlan notchPlan, int Rotors, long PlainTxtLen, byte[] PlainTxt,
+    {    public void GetNotchPlan(NotchPlan notchPlan, int Rotors, long PlainTxtLen, byte[] PlainTxt,
             int SeedNotchTurnover, byte[] eSpinFactor, int Radix, ref int[,] NotchTurnoverPlan)
         {
-            if (notchPlan.Equals(NotchPlan.Sigaba))
-
+            if (notchPlan.Equals(NotchPlan.HopScotch))
             {
-                // original Sigaba skipping, more advanced multiple rotor skipping
-                // for n= rotors, how many combinations (sans ALL)
+                // more advanced multiple rotor skipping for n= rotors, how many combinations (sans ALL)
 
                 long TotalCombinations = Rotors;
                 for (int i = 2; i < Rotors; i++)
@@ -42,7 +38,6 @@ namespace RotorSpinPln
                         NotchTurnoverPlan[l, bRandStr.Length - i - 1] = Convert.ToInt16(bRandStr.Substring(i, 1));
                     }
                 }
-
             }
 
             if (notchPlan.Equals(NotchPlan.Sequential))
@@ -78,8 +73,6 @@ namespace RotorSpinPln
                     }
 
                 }
-
-
             }
 
         }
@@ -91,8 +84,6 @@ namespace RotorSpinPln
             if (i > (Radix - 1)) { i = 0; }
             b = (byte)i;
         }
-
     }
-
 }
 
