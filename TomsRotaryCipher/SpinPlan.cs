@@ -8,7 +8,34 @@ using StoneAgeEncryptionService;
 namespace RotorSpinPln
 {
     class RotorSpinPlan
-    {    public void GetNotchPlan(NotchPlan notchPlan, int Rotors, long PlainTxtLen, byte[] PlainTxt,
+    {
+        protected static long ForStreaming = -1;
+
+        public byte GetNotchPlanNew(NotchPlan notchPlan, int Rotors, long PlainTxtLen, byte[] PlainTxt,
+    int SeedNotchTurnover, byte[] eSpinFactor, int Radix, ref int[,] NotchTurnoverPlan)
+        {// this is a work in progress,
+         // halting work for the holidays.
+            ForStreaming++;
+
+            if (notchPlan.Equals(NotchPlan.HopScotch))
+            {
+                return (byte)0;
+            }
+
+            if (notchPlan.Equals(NotchPlan.Sequential))
+            {
+                if (ForStreaming.Equals(1))
+                {
+                    return (byte)1;
+                } else
+                {
+                    return (byte)0;
+                }
+           }
+
+            return (byte)0;
+        }
+        public void GetNotchPlan(NotchPlan notchPlan, int Rotors, long PlainTxtLen, byte[] PlainTxt,
             int SeedNotchTurnover, byte[] eSpinFactor, int Radix, ref int[,] NotchTurnoverPlan)
         {
             if (notchPlan.Equals(NotchPlan.HopScotch))
@@ -45,38 +72,48 @@ namespace RotorSpinPln
                 // this is the simple odometer skipping found in the original rotor cipher machines:
                 NotchTurnoverPlan = new int[PlainTxtLen, Rotors];
                 for (long l = 0; l <= PlainTxtLen - 1; l++)
-                {
-                    //increment innermost Rotor (1) all the time:
-                    // (Note, only Side 1 of double sided rotor moves, 
-                    // Side 0 always remains constant)
-                    bool PreviousMaxValue = false;
+                {//increment innermost Rotor (1) all the time:
+                 // (Note, only Side 1 of double sided rotor moves, 
+                 // Side 0 always remains constant)
                     NotchTurnoverPlan[l, 0] = (byte)1;
                     IncRotorPos(ref eSpinFactor[0], Radix);
 
-                    int sFc = (int)eSpinFactor[0];
-                    if (sFc.Equals(0)) { PreviousMaxValue = true; }
-
-                    // now increment other rotors based on Spin Factor:
-                    for (int r = 1; r <= eSpinFactor.Length - 1; r++)
-                    {
-                        // prior rotor has completed 1 cycle, increment next downstream rotor
-                        if (eSpinFactor[r - 1].Equals(0) && PreviousMaxValue)
-                        {// increment this rotor!
-                            PreviousMaxValue = false;
-
-                            NotchTurnoverPlan[l, r] = (byte)1;
-                            IncRotorPos(ref eSpinFactor[r], Radix);
-
-                            sFc = (int)eSpinFactor[r];
-                            if (sFc.Equals(0)) { PreviousMaxValue = true; }
+                    if (((int)eSpinFactor[0]).Equals(0)) 
+                    {// now increment other rotors based on Spin Factor:
+                        for (int r = 1; r <= eSpinFactor.Length - 1; r++)
+                        {// prior rotor has completed 1 cycle, increment next downstream rotor
+                            if (eSpinFactor[r - 1].Equals(0))
+                            {// increment this rotor :(
+                                NotchTurnoverPlan[l, r] = (byte)1;
+                                IncRotorPos(ref eSpinFactor[r], Radix);
+                                break;
+                            }
                         }
                     }
-
                 }
+                // ForTestingOnly() produces a hash of NotchTurnoverPlan[,] 
+                // which is required when making changes to GetNotchPlan(), 
+                // first get a hash of the original logic, then compare to hash
+                // of new logic, they should match. DO NOT LEAVE UNCOMMENTED!
+                // This code is HIGHLY inefficient, and slows down performance. 
+                
+                //string HashForTestOnly = ForTestingOnly(NotchTurnoverPlan, PlainTxtLen);
             }
 
         }
-
+        static string ForTestingOnly(int[,] NotchTurnoverPlan, long PlainTxtLen)
+        {// this takes forever to run, is used to verify if any changes affect the original NotchTurnoverPlan logic.
+            long dim = NotchTurnoverPlan.Length / PlainTxtLen;
+            string ForHashing = string.Empty;
+            for (long i = 0; i < PlainTxtLen; i++)
+            {
+                for (long k = 0; k < dim; k++)
+                {
+                    ForHashing += NotchTurnoverPlan[i, k];
+                }
+            }
+            return Hashing.sha256.ComputeSha256Hash(ForHashing);
+        }
         static void IncRotorPos(ref byte b, int Radix)
         {
             int i = (int)b;
