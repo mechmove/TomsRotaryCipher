@@ -72,7 +72,7 @@ namespace StoneAgeEncryptionService
         {
             const int sides = 2;
             const int radix = 256;
-            const int randomMultiplier = 20;
+            const int randomMultiplier = 30;
 
             if (oSeeds.SeedNotchPlan is null)
             {
