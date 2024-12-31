@@ -72,7 +72,7 @@ namespace StoneAgeEncryptionService
         {
             const int sides = 2;
             const int radix = 256;
-            const int randomMultiplier = 20;
+            const int randomMultiplier = 30;
 
             if (oSeeds.SeedNotchPlan is null)
             {
@@ -143,7 +143,7 @@ namespace StoneAgeEncryptionService
                         Transform = ByteLookup(Transform, r, radix, totalRotors, e, eVirtualRotorMove);
                     }
 
-                    // now backwards through rotors and plugboard
+                    // now backwards through rotors and plugboard 
                     for (int r = totalRotors - 2; r >= 0; r--)
                     {
                         Transform = ByteLookupRev(Transform, r, radix, totalRotors, e, eVirtualRotorMove);
@@ -161,7 +161,7 @@ namespace StoneAgeEncryptionService
                     }
                     if (nrm.Equals(NoReflectorMode.Decipher))
                     {
-                        // now backwards through rotors and plugboard
+                        // now backwards through rotors and plugboard 
                         for (int r = totalRotors - 2; r >= 0; r--)
                         {
                             Transform = ByteLookupRev(Transform, r, radix, totalRotors, e, eVirtualRotorMove);
@@ -196,35 +196,33 @@ namespace StoneAgeEncryptionService
             }
             return Rtn;
         }
-
         private byte ByteLookupRev(byte currentByte, int Rotor, int Radix, int TotalRotors, byte[,,] e, byte[] eVirtualRotorMove)
         {
-            if (Rotor.Equals(0)) // reflector never goes backwards
+            if ((Rotor.Equals(0))) // stationary rotor, PlugBoard
+            {
+                return (byte)e[Rotor, 1, currentByte];
+
+            }
+            if ((Rotor.Equals(TotalRotors - 1))) // stationary rotor, Reflector 
             {
                 return (byte)e[Rotor, 0, currentByte];
             }
-            else
-            {
-                int OffsetTst = e[Rotor, 0, currentByte] - eVirtualRotorMove[Rotor - 1];
-                return (byte)OffsetTst;
-            }
+            int OffsetTst = e[Rotor, 0, currentByte] - eVirtualRotorMove[Rotor - 1];
+            return (byte)OffsetTst;
         }
-
         private byte ByteLookup(byte currentByte, int Rotor, int Radix, int TotalRotors, byte[,,] e, byte[] eVirtualRotorMove)
         {
-            if (Rotor.Equals(0) || (Rotor.Equals(TotalRotors - 1)))
+            if ((Rotor.Equals(0))||(Rotor.Equals(TotalRotors - 1))) // stationary rotor, Reflector and PlugBoard
             {
-                return e[Rotor, 1, currentByte];
+                return (byte)e[Rotor, 1, currentByte];
             }
-            else
+            int Offset = eVirtualRotorMove[Rotor - 1] + currentByte;
+            if (Offset >= Radix)
             {
-                int Offset = eVirtualRotorMove[Rotor - 1] + currentByte;
-                if (Offset >= Radix)
-                {
-                    Offset = Offset - Radix;
-                }
-                return e[Rotor, 1, Offset];
+                Offset = Offset - Radix;
             }
+
+            return e[Rotor, 1, Offset];
         }
 
         private void ConfigureStartPositions(byte[] eStartPositions, int Radix, int Rotors, ref byte[,,] e)
@@ -297,22 +295,21 @@ namespace StoneAgeEncryptionService
             for (int iBinaryPos = 0; iBinaryPos <= (radix - 1); iBinaryPos++)
             {
                 bHolding[0, 0, iBinaryPos] = bSource[0, 0, iBinaryPos];
-                bHolding[0, 1, iBinaryPos] = bSource[0, 1, iBinaryPos];
             }
 
             /* PlugBoard : igousbtrcpnmefwhqlkavzdyxj
              * PlugBoard : giuobsrtpcmnfehwlqakzvydjx*/
             for (int iBinaryPos = 0; iBinaryPos <= (radix - 2); iBinaryPos += 2)
             {
-                bHolding[0, 1, iBinaryPos] = bHolding[0, 0, iBinaryPos + 1];
-                bHolding[0, 1, iBinaryPos + 1] = bHolding[0, 0, iBinaryPos];
+                bHolding[0, 1, bHolding[0, 0, iBinaryPos]] = bHolding[0, 0, iBinaryPos + 1];
+                bHolding[0, 1, bHolding[0, 0, iBinaryPos+1]] = bHolding[0, 0, iBinaryPos];
             }
 
             // now update b
             for (int iCol = 0; iCol <= (radix - 1); iCol++)
             {
-                b[0, 0, bHolding[0, 0, iCol]] = bHolding[0, 1, iCol];
-                b[0, 1, bHolding[0, 1, iCol]] = bHolding[0, 0, iCol];
+                b[0, 0, iCol] = bHolding[0, 0, iCol]; 
+                b[0, 1, iCol] = bHolding[0, 1, iCol]; // this side is used during lookups
             }
         }
 
@@ -325,23 +322,21 @@ namespace StoneAgeEncryptionService
             for (int iBinaryPos = 0; iBinaryPos <= (radix - 1); iBinaryPos++)
             {
                 bHolding[0, 0, radix - iBinaryPos - 1] = bSource[0, 0, iBinaryPos];
-                bHolding[0, 1, radix - iBinaryPos - 1] = bSource[0, 1, iBinaryPos];
             }
 
             /*     
             Reflector : phafjdsilcebguwyvkotqzmxrn
             Reflector : nrxmzqtokvywugbeclisdjfahp*/
-            int Query = radix - 1;
             for (int iBinaryPos = 0; iBinaryPos <= (radix) - 1; iBinaryPos++)
             {
-                bHolding[0, 1, (radix - iBinaryPos - 1)] = bHolding[0, 0, iBinaryPos];
+                bHolding[0, 1, bHolding[0, 0, iBinaryPos]] = bHolding[0, 0, radix - iBinaryPos - 1];
             }
 
             // now update b
             for (int iCol = 0; iCol <= (radix - 1); iCol++)
             {
-                b[TotalRotors - 1, 0, bHolding[0, 0, iCol]] = bHolding[0, 1, iCol];
-                b[TotalRotors - 1, 1, bHolding[0, 1, iCol]] = bHolding[0, 0, iCol];
+                b[TotalRotors - 1, 0, iCol] = bHolding[0, 0, iCol];
+                b[TotalRotors - 1, 1, iCol] = bHolding[0, 1, iCol];
             }
         }
 

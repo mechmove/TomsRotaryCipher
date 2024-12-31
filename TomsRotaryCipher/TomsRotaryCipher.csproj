@@ -41,6 +41,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="sha256.cs" />
     <Compile Include="SpinPlan.cs" />
     <Compile Include="Supporting.cs" />
     <Compile Include="TomsRotaryCipher.cs" />
