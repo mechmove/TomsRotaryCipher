@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Security.Cryptography;
 using System.CodeDom.Compiler;
+using System.Security.Policy;
 
 namespace StoneAgeEncryptionService
 {
@@ -200,7 +201,7 @@ namespace StoneAgeEncryptionService
         {
             if ((Rotor.Equals(0))) // stationary rotor, PlugBoard
             {
-                return (byte)e[Rotor, 1, currentByte];
+                return LookupPlugBoard(e, Radix, 1, currentByte);// pass side 1 (ciphertext), rtn 0 (plaintext)
 
             }
             int OffsetTst = e[Rotor, 0, currentByte] - eVirtualRotorMove[Rotor - 1];
@@ -208,10 +209,15 @@ namespace StoneAgeEncryptionService
         }
         private byte ByteLookup(byte currentByte, int Rotor, int Radix, int TotalRotors, byte[,,] e, byte[] eVirtualRotorMove)
         {
-            if ((Rotor.Equals(0))||(Rotor.Equals(TotalRotors - 1))) // stationary rotor, Reflector and PlugBoard
+            if (Rotor.Equals(0)) // stationary rotor PlugBoard
+            {
+                return LookupPlugBoard(e, Radix, 0, currentByte); // pass side 0 (plaintext), rtn side 1 (ciphertext)
+            }
+            if ((Rotor.Equals(TotalRotors - 1))) // stationary rotor Reflector
             {
                 return (byte)e[Rotor, 1, currentByte];
             }
+
             int Offset = eVirtualRotorMove[Rotor - 1] + currentByte;
             if (Offset >= Radix)
             {
@@ -219,6 +225,24 @@ namespace StoneAgeEncryptionService
             }
 
             return e[Rotor, 1, Offset];
+        }
+        private byte LookupPlugBoard(byte[,,] e, int Radix, int Side, byte currentByte)
+        {
+            return currentByte; //bypass this logic, Plugboard runs SLOW, comment out if you want to see PlugBoard in action.
+
+            int TargetSide = 0; // rtn the other side
+            if (Side.Equals(0))
+            {
+                TargetSide = 1;
+            }
+            for (int i = 0; i < Radix; i++)
+            {
+                if (e[0, Side, i].Equals(currentByte))
+                {
+                    return e[0, TargetSide, i];
+                }
+            }
+            return (byte)(0); // we will never get here
         }
 
         private void ConfigureStartPositions(byte[] eStartPositions, int Radix, int Rotors, ref byte[,,] e)
@@ -297,8 +321,8 @@ namespace StoneAgeEncryptionService
              * PlugBoard : giuobsrtpcmnfehwlqakzvydjx*/
             for (int iBinaryPos = 0; iBinaryPos <= (radix - 2); iBinaryPos += 2)
             {
-                bHolding[0, 1, bHolding[0, 0, iBinaryPos]] = bHolding[0, 0, iBinaryPos + 1];
-                bHolding[0, 1, bHolding[0, 0, iBinaryPos+1]] = bHolding[0, 0, iBinaryPos];
+                bHolding[0, 1, bHolding[0, 0, iBinaryPos]] = (byte)(iBinaryPos + 1);
+                bHolding[0, 1, bHolding[0, 0, iBinaryPos+1]] = (byte)iBinaryPos;
             }
 
             // now update b
