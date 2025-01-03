@@ -203,10 +203,6 @@ namespace StoneAgeEncryptionService
                 return (byte)e[Rotor, 1, currentByte];
 
             }
-            if ((Rotor.Equals(TotalRotors - 1))) // stationary rotor, Reflector 
-            {
-                return (byte)e[Rotor, 0, currentByte];
-            }
             int OffsetTst = e[Rotor, 0, currentByte] - eVirtualRotorMove[Rotor - 1];
             return (byte)OffsetTst;
         }
