@@ -85,6 +85,12 @@ namespace StoneAgeEncryptionService
                 throw new Exception("If RotaryCipherMode = NoReflector, NoReflectorMode cannot be None. Select Encipher or Decipher!");
             }
 
+            if (em.Equals(RotaryCipherMode.WithReflector) && !cm.Equals(CBCMode.None))
+            {
+                throw new Exception("If RotaryCipherMode = WithReflector, CBCMode must be None.");
+            }
+
+
             oSettings.CBCMode = cm;
             oSettings.NotchPlan = np;
             int movingCipherRotors = oSettings.MovingCipherRotors;
