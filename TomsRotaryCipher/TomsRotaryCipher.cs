@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Security.Cryptography;
 using System.CodeDom.Compiler;
 using System.Security.Policy;
+using System.IO;
 
 namespace StoneAgeEncryptionService
 {
@@ -30,6 +31,7 @@ namespace StoneAgeEncryptionService
     public enum NoReflectorMode { None, Encipher, Decipher}
     public enum NotchPlan { Sequential, HopScotch}
     public enum CBCMode { None, Forward, Reverse }
+    public enum DebugMode { No , Yes}
 
     public class TomsRotaryCipher
     {
@@ -52,6 +54,7 @@ namespace StoneAgeEncryptionService
             public RotaryCipherMode RotaryCipherMode { get; set; }
             public NoReflectorMode NoReflectorMode { get; set; }
             public CBCMode CBCMode { get; set; }
+            public DebugMode DebugMode { get; set; }
         }
 
         public void SetMovingCipherRotors(int Rotors)
@@ -69,7 +72,9 @@ namespace StoneAgeEncryptionService
         public byte[] SAES(NotchPlan np, byte[] UserStr,
             RotaryCipherMode em,
             NoReflectorMode nrm,
-            CBCMode cm = CBCMode.None)
+            CBCMode cm = CBCMode.None,
+            DebugMode dm = DebugMode.No
+            )
         {
             const int sides = 2;
             const int radix = 256;
@@ -123,6 +128,16 @@ namespace StoneAgeEncryptionService
             int totalRotors = TotalRotors;
 
             ConfigureRevLookUps(radix, totalRotors, ref e);
+
+            if (dm.Equals(DebugMode.Yes))
+            {
+                File.WriteAllText("PlugBoard.csv", ExtractRotorIntoCSV(e, radix, 0));
+                for (int rotor = 1; rotor < TotalRotors - 1; rotor++)
+                {
+                    File.WriteAllText("Rotor" + rotor + ".csv", ExtractRotorIntoCSV(e, radix, rotor));
+                }
+                File.WriteAllText("Reflector.csv", ExtractRotorIntoCSV(e, radix, TotalRotors - 1));
+            }
 
             byte[] Rtn = new byte[UserStr.Length];
             byte currentByte = new byte();
@@ -207,7 +222,7 @@ namespace StoneAgeEncryptionService
         {
             if ((Rotor.Equals(0))) // stationary rotor, PlugBoard
             {
-                return LookupPlugBoard(e, Radix, 1, currentByte);// pass side 1 (ciphertext), rtn 0 (plaintext)
+                return LookupPlugBoard(e, Radix, 0, currentByte);// always look at side 0 for a true plugboard
 
             }
             int OffsetTst = e[Rotor, 0, currentByte] - eVirtualRotorMove[Rotor - 1];
@@ -217,7 +232,7 @@ namespace StoneAgeEncryptionService
         {
             if (Rotor.Equals(0)) // stationary rotor PlugBoard
             {
-                return LookupPlugBoard(e, Radix, 0, currentByte); // pass side 0 (plaintext), rtn side 1 (ciphertext)
+                return LookupPlugBoard(e, Radix, 0, currentByte); // always look at side 0 for a true plugboard
             }
             if ((Rotor.Equals(TotalRotors - 1))) // stationary rotor Reflector
             {
@@ -311,6 +326,15 @@ namespace StoneAgeEncryptionService
             oRandom.NextBytes(eSpinFactor);
             eSpinFactor[0] = 0;
         }
+        private string ExtractRotorIntoCSV(byte[,,] b, int radix, int rotor)
+        {
+            string Out = "address,PlainTxt,CipherTxt" + Environment.NewLine;
+            for (int i = 0; i < radix; i++)
+            {
+                Out += i + "," + b[rotor, 0, i] + "," + b[rotor, 1, i] + Environment.NewLine;
+            }
+            return Out;
+        }
 
         private void CreatePlugBoard(ref byte[,,] b, int Seed, int radix, int randomMultiplier)
         { // re-create this rotor with seed for more variance:
@@ -326,9 +350,9 @@ namespace StoneAgeEncryptionService
             /* PlugBoard : igousbtrcpnmefwhqlkavzdyxj
              * PlugBoard : giuobsrtpcmnfehwlqakzvydjx*/
             for (int iBinaryPos = 0; iBinaryPos <= (radix - 2); iBinaryPos += 2)
-            {
-                bHolding[0, 1, bHolding[0, 0, iBinaryPos]] = (byte)(iBinaryPos + 1);
-                bHolding[0, 1, bHolding[0, 0, iBinaryPos+1]] = (byte)iBinaryPos;
+            {   
+                bHolding[0, 1, iBinaryPos] = bHolding[0, 0, iBinaryPos + 1];
+                bHolding[0, 1, iBinaryPos + 1] = bHolding[0, 0, iBinaryPos];
             }
 
             // now update b
