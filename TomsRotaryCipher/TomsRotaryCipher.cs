@@ -222,7 +222,7 @@ namespace StoneAgeEncryptionService
         {
             if ((Rotor.Equals(0))) // stationary rotor, PlugBoard
             {
-                return LookupPlugBoard(e, Radix, 0, currentByte);// always look at side 0 for a true plugboard
+                return LookupPlugBoard(e, Radix, 0, currentByte);// you can look at any side, coming or going.
 
             }
             int OffsetTst = e[Rotor, 0, currentByte] - eVirtualRotorMove[Rotor - 1];
@@ -232,7 +232,7 @@ namespace StoneAgeEncryptionService
         {
             if (Rotor.Equals(0)) // stationary rotor PlugBoard
             {
-                return LookupPlugBoard(e, Radix, 0, currentByte); // always look at side 0 for a true plugboard
+                return LookupPlugBoard(e, Radix, 0, currentByte); // you can look at any side, coming or going.
             }
             if ((Rotor.Equals(TotalRotors - 1))) // stationary rotor Reflector
             {
