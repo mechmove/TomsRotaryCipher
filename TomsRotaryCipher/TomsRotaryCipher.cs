@@ -49,6 +49,7 @@ namespace StoneAgeEncryptionService
 
         public class Settings
         {
+            public string ReflectorDesc;
             public int MovingCipherRotors { get; set; }
             public NotchPlan NotchPlan { get; set; }
             public RotaryCipherMode RotaryCipherMode { get; set; }
@@ -137,6 +138,16 @@ namespace StoneAgeEncryptionService
                     File.WriteAllText("Rotor" + rotor + ".csv", ExtractRotorIntoCSV(e, radix, rotor));
                 }
                 File.WriteAllText("Reflector.csv", ExtractRotorIntoCSV(e, radix, TotalRotors - 1));
+                // now validate the reflector in case any code changes were made,
+                if (!ValidateReflector(e, radix, TotalRotors - 1))
+                    { // first get Guid to preserve results
+                    DateTime dt = DateTime.Now;
+                    string post = "TestFailure_" + dt.Year.ToString() + "_" + dt.Month.ToString().PadLeft(2, '0') + "_" + dt.Day.ToString().PadLeft(2, '0') + "_" + Guid.NewGuid().ToString("N").Substring(0, 4);
+                    string MainReport= "Results_" + post + ".txt";
+                    string ReflectorUniqueName = "Reflector" + post + ".csv";
+                    File.WriteAllText(ReflectorUniqueName, ExtractRotorIntoCSV(e, radix, TotalRotors - 1));
+                    File.WriteAllText(MainReport, oSettings.ReflectorDesc + Environment.NewLine + "Reflector Failure, Seed =" + BitConverter.ToInt32(oSeeds.SeedReflector, 0).ToString());
+                };
             }
 
             byte[] Rtn = new byte[UserStr.Length];
@@ -246,6 +257,31 @@ namespace StoneAgeEncryptionService
             }
 
             return e[Rotor, 1, Offset];
+        }
+     
+        private bool ValidateReflector(byte[,,] e, int Radix, int Rotor)
+        {   // this is to test logic changes, which should be infrequent
+            bool result = true;
+            for (int Byte = 0; Byte < Radix; Byte++)
+            {
+                for (int address = 0; address < Radix; address++)
+                {// check for a match
+                    int PlainTxt = e[Rotor, 0, Byte];
+                    int CipherTxt = e[Rotor, 1, Byte];
+                    if (Byte.Equals(CipherTxt))// for the newer Reflector, only the CipherTxt side can be used
+                    {
+                        result = false;
+                    }
+                    if (PlainTxt.Equals(CipherTxt)) // for the original Reflector, either side can be used for comparision
+                    {
+                        if (Byte.Equals(PlainTxt))
+                        {
+                            result = false;
+                        }
+                    }
+                }
+            }
+            return result;
         }
         private byte LookupPlugBoard(byte[,,] e, int Radix, int Side, byte currentByte)
         {
@@ -363,8 +399,10 @@ namespace StoneAgeEncryptionService
             }
         }
 
+        // this is the new Reflector, plaintxt != ciphertxt
         private void CreateReflector(ref byte[,,] b, int Seed, int radix, int randomMultiplier)
-        {// re-create this rotor with seed for more variance:
+        {
+            oSettings.ReflectorDesc = "this is the new Reflector, plaintxt != ciphertxt";
             byte[,,] bSource = CreateMachine(1, 2, radix);
             byte[,,] bHolding = CreateMachine(1, 2, radix);
             PopulateRotors(ref bSource, Seed, radix, randomMultiplier, 1, 2);
@@ -389,6 +427,38 @@ namespace StoneAgeEncryptionService
                 b[TotalRotors - 1, 1, iCol] = bHolding[0, 1, iCol];
             }
         }
+
+        // this is the Original Reflector, PlainTxt = CipherTxt
+        private void xCreateReflector(ref byte[,,] b, int Seed, int radix, int randomMultiplier)
+        {
+            oSettings.ReflectorDesc = "this is the Original Reflector, PlainTxt = CipherTxt";
+            byte[,,] bSource = CreateMachine(1, 2, radix);
+            byte[,,] bHolding = CreateMachine(1, 2, radix);
+            PopulateRotors(ref bSource, Seed, radix, randomMultiplier, 1, 2);
+
+            for (int iBinaryPos = 0; iBinaryPos <= (radix - 1); iBinaryPos++)
+            {
+                bHolding[0, 0, radix - iBinaryPos - 1] = bSource[0, 0, iBinaryPos];
+                bHolding[0, 1, radix - iBinaryPos - 1] = bSource[0, 1, iBinaryPos]; // this wasen't doing anything, but leave it for immediate comparision purposes
+            }
+
+            /*     
+            Reflector : phafjdsilcebguwyvkotqzmxrn
+            Reflector : nrxmzqtokvywugbeclisdjfahp*/
+            int Query = radix - 1;
+            for (int iBinaryPos = 0; iBinaryPos <= (radix) - 1; iBinaryPos++)
+            {
+                bHolding[0, 1, (radix - iBinaryPos - 1)] = bHolding[0, 0, iBinaryPos];
+            }
+
+            // now update b
+            for (int iCol = 0; iCol <= (radix - 1); iCol++)
+            {
+                b[TotalRotors - 1, 0, bHolding[0, 0, iCol]] = bHolding[0, 1, iCol];
+                b[TotalRotors - 1, 1, bHolding[0, 1, iCol]] = bHolding[0, 0, iCol];
+            }
+        }
+
 
 
         private byte[,,] CreateMachine(int numRotors, int Sides, int Radix)
