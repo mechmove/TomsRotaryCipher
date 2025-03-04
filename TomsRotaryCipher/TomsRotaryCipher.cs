@@ -111,8 +111,6 @@ namespace StoneAgeEncryptionService
             AssignTurnOverPositions(ref eSpinFactor, BitConverter.ToInt32(oSeeds.SeedTurnOverPositions, 0));
 
             RotorSpinPln.RotorSpinPlan oSig = new RotorSpinPln.RotorSpinPlan();
-            oSig.GetNotchPlan(np, movingCipherRotors, UserStr.Length, UserStr, BitConverter.ToInt32(oSeeds.SeedNotchPlan, 0),
-            eSpinFactor, radix, ref notchTurnoverPlan);
 
             byte[] eStartPositions = new byte[TotalRotors - 2];
             AssignStartPositions(ref eStartPositions, BitConverter.ToInt32(oSeeds.SeedStartPositions, 0));
@@ -140,7 +138,7 @@ namespace StoneAgeEncryptionService
                 File.WriteAllText("Reflector.csv", ExtractRotorIntoCSV(e, radix, TotalRotors - 1));
                 // now validate the reflector in case any code changes were made,
                 if (!ValidateReflector(e, radix, TotalRotors - 1))
-                    { // first get Guid to preserve results
+                { // first get Guid to preserve results
                     DateTime dt = DateTime.Now;
                     string post = "TestFailure_" + dt.Year.ToString() + "_" + dt.Month.ToString().PadLeft(2, '0') + "_" + dt.Day.ToString().PadLeft(2, '0') + "_" + Guid.NewGuid().ToString("N").Substring(0, 4);
                     string MainReport= "Results_" + post + ".txt";
@@ -218,10 +216,14 @@ namespace StoneAgeEncryptionService
                 Rtn[i] = Transform;
                 TransformLast = Transform;
 
+                byte[] bRtn;
+                bRtn = oSig.GetNotchPlan(np, movingCipherRotors, i, BitConverter.ToInt32(oSeeds.SeedNotchPlan, 0),
+                ref eSpinFactor, radix);
+
                 // spin rotors based on notch plan
                 for (int r = 1; r <= totalRotors - 2; r++)
                 {
-                    if (notchTurnoverPlan[i, r - 1].Equals(1))
+                    if (bRtn[r - 1].Equals(1))
                     {
                         MoveArrayPointerMainRotors(r, 1, radix, ref eVirtualRotorMove);
                     }
@@ -258,7 +260,7 @@ namespace StoneAgeEncryptionService
 
             return e[Rotor, 1, Offset];
         }
-     
+
         private bool ValidateReflector(byte[,,] e, int Radix, int Rotor)
         {   // this is to test logic changes, which should be infrequent
             bool result = true;
@@ -386,7 +388,7 @@ namespace StoneAgeEncryptionService
             /* PlugBoard : igousbtrcpnmefwhqlkavzdyxj
              * PlugBoard : giuobsrtpcmnfehwlqakzvydjx*/
             for (int iBinaryPos = 0; iBinaryPos <= (radix - 2); iBinaryPos += 2)
-            {   
+            {
                 bHolding[0, 1, iBinaryPos] = bHolding[0, 0, iBinaryPos + 1];
                 bHolding[0, 1, iBinaryPos + 1] = bHolding[0, 0, iBinaryPos];
             }
@@ -394,7 +396,7 @@ namespace StoneAgeEncryptionService
             // now update b
             for (int iCol = 0; iCol <= (radix - 1); iCol++)
             {
-                b[0, 0, iCol] = bHolding[0, 0, iCol]; 
+                b[0, 0, iCol] = bHolding[0, 0, iCol];
                 b[0, 1, iCol] = bHolding[0, 1, iCol]; // this side is used during lookups
             }
         }
@@ -855,7 +857,7 @@ namespace StoneAgeEncryptionService
             Int32 iDice = BitConverter.ToInt32(bR, 0);
             Random rDice = new Random(iDice);
             // roll the dice up to 7 X to populate bR
-            int ThrowDiceXTimes = rDice.Next(1, 7 + 1); 
+            int ThrowDiceXTimes = rDice.Next(1, 7 + 1);
             for (int j = 0; j < ThrowDiceXTimes; j++)
             {
                 oRNG.GetBytes(bR);
