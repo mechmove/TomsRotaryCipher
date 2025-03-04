@@ -9,32 +9,6 @@ namespace RotorSpinPln
 {
     class RotorSpinPlan
     {
-        protected static long ForStreaming = -1;
-
-        public byte GetNotchPlanNew(NotchPlan notchPlan, int Rotors, long PlainTxtLen, byte[] PlainTxt,
-    int SeedNotchTurnover, byte[] eSpinFactor, int Radix, ref int[,] NotchTurnoverPlan)
-        {// this is a work in progress,
-         // halting work for the holidays.
-            ForStreaming++;
-
-            if (notchPlan.Equals(NotchPlan.HopScotch))
-            {
-                return (byte)0;
-            }
-
-            if (notchPlan.Equals(NotchPlan.Sequential))
-            {
-                if (ForStreaming.Equals(1))
-                {
-                    return (byte)1;
-                } else
-                {
-                    return (byte)0;
-                }
-           }
-
-            return (byte)0;
-        }
         public void GetNotchPlan(NotchPlan notchPlan, int Rotors, long PlainTxtLen, byte[] PlainTxt,
             int SeedNotchTurnover, byte[] eSpinFactor, int Radix, ref int[,] NotchTurnoverPlan)
         {
