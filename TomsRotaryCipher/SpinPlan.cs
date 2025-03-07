@@ -50,10 +50,10 @@ namespace RotorSpinPln
                     RotorPos = -1;
                 }
 
-                for (int x = 0; x <= (Rotors - 1); x++)
-                {
-                    ForTest += bRtn[x].ToString();
-                }
+                //for (int x = 0; x <= (Rotors - 1); x++)
+                //{
+                //    ForTest += bRtn[x].ToString();
+                //}
 
                 //if (ForTest.Length.Equals(3000))
                 //{
@@ -85,10 +85,10 @@ namespace RotorSpinPln
                     RotorPos = -1;
                 }
 
-                for (int r = 0; r <= (Rotors - 1); r++)
-                {
-                    ForTest += bRtn[r].ToString();
-                }
+                //for (int r = 0; r <= (Rotors - 1); r++)
+                //{
+                //    ForTest += bRtn[r].ToString();
+                //}
 
                 //if (ForTest.Length.Equals(4482))
                 //{
