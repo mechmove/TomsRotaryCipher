@@ -106,7 +106,6 @@ namespace StoneAgeEncryptionService
 
             // make a local copy for speed optimization
             byte[] eSpinFactor = new byte[TotalRotors - 2];
-            int[,] notchTurnoverPlan = new int[0, 0];
 
             AssignTurnOverPositions(ref eSpinFactor, BitConverter.ToInt32(oSeeds.SeedTurnOverPositions, 0));
 
