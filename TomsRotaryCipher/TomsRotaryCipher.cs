@@ -234,7 +234,7 @@ namespace StoneAgeEncryptionService
         {
             if ((Rotor.Equals(0))) // stationary rotor, PlugBoard
             {
-                return LookupPlugBoard(e, Radix, 0, currentByte);// you can look at any side, coming or going.
+                return (byte)e[Rotor, 0, currentByte];
 
             }
             int OffsetTst = e[Rotor, 0, currentByte] - eVirtualRotorMove[Rotor - 1];
@@ -244,7 +244,7 @@ namespace StoneAgeEncryptionService
         {
             if (Rotor.Equals(0)) // stationary rotor PlugBoard
             {
-                return LookupPlugBoard(e, Radix, 0, currentByte); // you can look at any side, coming or going.
+                return (byte)e[Rotor, 1, currentByte];
             }
             if ((Rotor.Equals(TotalRotors - 1))) // stationary rotor Reflector
             {
@@ -284,24 +284,7 @@ namespace StoneAgeEncryptionService
             }
             return result;
         }
-        private byte LookupPlugBoard(byte[,,] e, int Radix, int Side, byte currentByte)
-        {
-            return currentByte; //bypass this logic, Plugboard runs SLOW, comment out if you want to see PlugBoard in action.
 
-            int TargetSide = 0; // rtn the other side
-            if (Side.Equals(0))
-            {
-                TargetSide = 1;
-            }
-            for (int i = 0; i < Radix; i++)
-            {
-                if (e[0, Side, i].Equals(currentByte))
-                {
-                    return e[0, TargetSide, i];
-                }
-            }
-            return (byte)(0); // we will never get here
-        }
 
         private void ConfigureStartPositions(byte[] eStartPositions, int Radix, int Rotors, ref byte[,,] e)
         {
@@ -373,7 +356,36 @@ namespace StoneAgeEncryptionService
             return Out;
         }
 
+        // this is the original plugboard, which works with direct addressing, no logic is required
         private void CreatePlugBoard(ref byte[,,] b, int Seed, int radix, int randomMultiplier)
+        { // re-create this rotor with seed for more variance:
+            byte[,,] bSource = CreateMachine(1, 2, radix);
+            byte[,,] bHolding = CreateMachine(1, 2, radix);
+            PopulateRotors(ref bSource, Seed, radix, randomMultiplier, 1, 2);
+
+            for (int iBinaryPos = 0; iBinaryPos <= (radix - 1); iBinaryPos++)
+            {
+                bHolding[0, 0, iBinaryPos] = bSource[0, 0, iBinaryPos];
+                bHolding[0, 1, iBinaryPos] = bSource[0, 1, iBinaryPos];
+            }
+
+            /* PlugBoard : igousbtrcpnmefwhqlkavzdyxj
+             * PlugBoard : giuobsrtpcmnfehwlqakzvydjx*/
+            for (int iBinaryPos = 0; iBinaryPos <= (radix - 2); iBinaryPos += 2)
+            {
+                bHolding[0, 1, iBinaryPos] = bHolding[0, 0, iBinaryPos + 1];
+                bHolding[0, 1, iBinaryPos + 1] = bHolding[0, 0, iBinaryPos];
+            }
+
+            // now update b
+            for (int iCol = 0; iCol <= (radix - 1); iCol++)
+            {
+                b[0, 0, bHolding[0, 0, iCol]] = bHolding[0, 1, iCol];
+                b[0, 1, bHolding[0, 1, iCol]] = bHolding[0, 0, iCol];
+            }
+        }
+        // this is the newer plugboard, which requires logic, don't use this, its too slow.
+        private void xCreatePlugBoard(ref byte[,,] b, int Seed, int radix, int randomMultiplier)
         { // re-create this rotor with seed for more variance:
             byte[,,] bSource = CreateMachine(1, 2, radix);
             byte[,,] bHolding = CreateMachine(1, 2, radix);
