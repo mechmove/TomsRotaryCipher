@@ -60,7 +60,6 @@ namespace RotorSpinPln
                             {// increment this rotor :(
                                 NotchTurnoverPlan[l, r] = (byte)1;
                                 IncRotorPos(ref eSpinFactor[r], Radix);
-                                break;
                             }
                         }
                     }
