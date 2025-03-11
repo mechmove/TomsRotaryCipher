@@ -75,7 +75,6 @@ namespace RotorSpinPln
                         {// increment this rotor :(
                             bRtn[r] = (byte)1;
                             IncRotorPos(ref eSpinFactor[r], Radix);
-                            break;
                         }
                     }
                 }
