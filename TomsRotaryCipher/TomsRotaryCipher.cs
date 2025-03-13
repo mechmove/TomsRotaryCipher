@@ -50,6 +50,7 @@ namespace StoneAgeEncryptionService
         public class Settings
         {
             public string ReflectorDesc;
+            public string BranchName = "Enter (Branch) Name for Compile, if multiple DLL versions";
             public int MovingCipherRotors { get; set; }
             public NotchPlan NotchPlan { get; set; }
             public RotaryCipherMode RotaryCipherMode { get; set; }
