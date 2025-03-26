@@ -49,7 +49,7 @@ namespace StoneAgeEncryptionService
         public class Settings
         {
             public string ReflectorDesc;
-            public string BranchName = "Latest Re-Write : nighttime";
+            public string BranchName = "Latest Re-Write : Wed Afternoon";
             public int MovingCipherRotors { get; set; }
             public NotchPlan NotchPlan { get; set; }
             public RotaryCipherMode RotaryCipherMode { get; set; }
@@ -70,7 +70,8 @@ namespace StoneAgeEncryptionService
 
         public Seeds oSeeds = new Seeds();
         public Settings oSettings = new Settings();
-
+        private enum RotorSide : int {Predestined = 0, Calculated = 1}// these values will match the CSV Rotor headings:
+                                                                      // Predestined and Calculated for ref. in array
         public byte[] SAES(NotchPlan np, byte[] UserStr,
             RotaryCipherMode em,
             NoReflectorMode nrm,
@@ -260,21 +261,21 @@ namespace StoneAgeEncryptionService
         {
             if ((Rotor.Equals(0))) // stationary rotor, PlugBoard
             {
-                return (byte)e[Rotor, 1, currentByte];
+                return e[Rotor, (int)RotorSide.Calculated , currentByte];
             }
 
-            int OffsetTst = e[Rotor, 0, currentByte] - eVirtualRotorMove[Rotor - 1];
+            int OffsetTst = e[Rotor, (int)RotorSide.Predestined, currentByte] - eVirtualRotorMove[Rotor - 1];
             return (byte)OffsetTst;
         }
         private byte ByteLookup(byte currentByte, int Rotor, int Radix, int TotalRotors, byte[,,] e, byte[] eVirtualRotorMove)
         {
             if (Rotor.Equals(0)) // stationary rotor PlugBoard
             {
-                return (byte)e[Rotor, 1, currentByte];
+                return e[Rotor, (int)RotorSide.Calculated, currentByte];
             }
             if ((Rotor.Equals(TotalRotors - 1))) // stationary rotor Reflector
             {
-                return (byte)e[Rotor, 1, currentByte];
+                return e[Rotor, (int)RotorSide.Calculated, currentByte];
             }
 
             int Offset = eVirtualRotorMove[Rotor - 1] + currentByte;
@@ -283,7 +284,7 @@ namespace StoneAgeEncryptionService
                 Offset = Offset - Radix;
             }
 
-            return e[Rotor, 1, Offset];
+            return e[Rotor, (int)RotorSide.Calculated, Offset];
         }
 
         private bool ValidateReflector(byte[,,] e, int Radix, int Rotor)
@@ -294,15 +295,15 @@ namespace StoneAgeEncryptionService
             {
                 for (int address = 0; address < Radix; address++)
                 {// check for a match
-                    int PlainTxt = e[Rotor, 0, Byte];
-                    int CipherTxt = e[Rotor, 1, Byte];
-                    if (Byte.Equals(CipherTxt))// for the newer Reflector, only the CipherTxt side can be used
+                    int Predestined = e[Rotor, (int)RotorSide.Predestined, Byte];
+                    int Calculated = e[Rotor, (int)RotorSide.Calculated, Byte];
+                    if (Byte.Equals(Calculated))// for the newer Reflector, only the CipherTxt side can be used
                     {
                         result = false;
                     }
-                    if (PlainTxt.Equals(CipherTxt)) // for the original Reflector, either side can be used for comparision
+                    if (Predestined.Equals(Calculated)) // for the original Reflector, either side can be used for comparision
                     {
-                        if (Byte.Equals(PlainTxt))
+                        if (Byte.Equals(Predestined))
                         {
                             result = false;
                         }
@@ -332,7 +333,7 @@ namespace StoneAgeEncryptionService
         {
             for (int Col = 0; Col <= (Radix - 1); Col++)
             {
-                e[Rotor, 1, e[Rotor, 0, Col]] = (byte)Col;
+                e[Rotor, (int)RotorSide.Calculated, e[Rotor, (int)RotorSide.Predestined, Col]] = (byte)Col;
             }
         }
 
@@ -353,11 +354,11 @@ namespace StoneAgeEncryptionService
             byte[] bAP = new byte[Radix];
             for (int i = 0; i <= Radix - 1; i++)
             {
-                bAP[i] = e[Row, 0, i];
+                bAP[i] = e[Row, (int)RotorSide.Predestined, i];
             }
             for (int i = 0; i <= (Radix - 1); i++)
             {
-                e[Row, 0, i] = bAP[eStartPosition];
+                e[Row, (int)RotorSide.Predestined, i] = bAP[eStartPosition];
                 eStartPosition++;
                 if (eStartPosition > (Radix - 1))
                 {
