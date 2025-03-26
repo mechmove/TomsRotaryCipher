@@ -353,11 +353,11 @@ namespace StoneAgeEncryptionService
             byte[] bAP = new byte[Radix];
             for (int i = 0; i <= Radix - 1; i++)
             {
-                bAP[i] = e[Row, 1, i];
+                bAP[i] = e[Row, 0, i];
             }
             for (int i = 0; i <= (Radix - 1); i++)
             {
-                e[Row, 1, i] = bAP[eStartPosition];
+                e[Row, 0, i] = bAP[eStartPosition];
                 eStartPosition++;
                 if (eStartPosition > (Radix - 1))
                 {
