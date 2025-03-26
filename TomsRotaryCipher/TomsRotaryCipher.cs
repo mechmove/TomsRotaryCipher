@@ -7,6 +7,8 @@ using System.Security.Cryptography;
 using System.CodeDom.Compiler;
 using System.Security.Policy;
 using System.IO;
+using static StoneAgeEncryptionService.TomsRotaryCipher;
+using System.Net;
 
 namespace StoneAgeEncryptionService
 {
@@ -38,19 +40,16 @@ namespace StoneAgeEncryptionService
         public class Seeds
         {
             public byte[] SeedXOR { get; set; }
-            public byte[] SeedRotors { get; set; }
             public byte[] SeedIndividualRotors { get; set; }
             public byte[] SeedNotchPlan { get; set; }
             public byte[] SeedTurnOverPositions { get; set; }
             public byte[] SeedStartPositions { get; set; }
-            public byte[] SeedPlugBoard { get; set; }
-            public byte[] SeedReflector { get; set; }
         }
 
         public class Settings
         {
             public string ReflectorDesc;
-            public string BranchName = "Enter (Branch) Name for Compile, if multiple DLL versions";
+            public string BranchName = "Latest Re-Write : nighttime";
             public int MovingCipherRotors { get; set; }
             public NotchPlan NotchPlan { get; set; }
             public RotaryCipherMode RotaryCipherMode { get; set; }
@@ -66,6 +65,7 @@ namespace StoneAgeEncryptionService
         }
 
         protected static long HighestIteration;// for analysis
+        protected static bool Experimental = false; // this is not working yet
         protected int TotalRotors { get { return 2 + oSettings.MovingCipherRotors; } set { } }  // MovingCipherRotors + 2; // need plugboard and reflector
 
         public Seeds oSeeds = new Seeds();
@@ -103,7 +103,7 @@ namespace StoneAgeEncryptionService
             int movingCipherRotors = oSettings.MovingCipherRotors;
 
             byte[,,] e = CreateMachine(TotalRotors, sides, radix);
-            PopulateRotors(ref e, BitConverter.ToInt32(oSeeds.SeedRotors, 0), radix, randomMultiplier, TotalRotors, sides,true);
+            PopulateRotors(ref e, 0, radix, randomMultiplier, TotalRotors, sides);
 
             // make a local copy for speed optimization
             byte[] eSpinFactor = new byte[TotalRotors - 2];
@@ -115,8 +115,21 @@ namespace StoneAgeEncryptionService
             byte[] eStartPositions = new byte[TotalRotors - 2];
             AssignStartPositions(ref eStartPositions, BitConverter.ToInt32(oSeeds.SeedStartPositions, 0));
             ConfigureStartPositions(eStartPositions, radix, TotalRotors, ref e);
-            CreatePlugBoard(ref e, BitConverter.ToInt32(oSeeds.SeedPlugBoard, 0), radix, randomMultiplier);
-            CreateReflector(ref e, BitConverter.ToInt32(oSeeds.SeedReflector, 0), radix, randomMultiplier);
+
+            // The PlugBoard, Reflector, and Cipher rotors can be created for any rotor in the system.
+            // Traditional positions, Plugboard is at pos 0, Reflector is in the last pos.
+            // If you change things around, the lookup routines might need changing based on whether plaintxt
+            // and ciphertext are referenced at runtime.
+
+            // the logic to create PlugBoard and Reflector are different, but seem to be interchangable.
+
+            // create PlugBoard, rotor = 0,
+            CreatePlugBoard(0, ref e, radix);
+            //CreateReflector(0, ref e, radix);
+
+            // create Reflector, rotor = TotalRotors - 1,
+            CreateReflector(TotalRotors - 1, ref e, radix);
+            //CreatePlugBoard(TotalRotors - 1, ref e, radix); // plugboard seems to work as Reflector
 
             oSettings.MovingCipherRotors = movingCipherRotors;
             oSettings.RotaryCipherMode = em;
@@ -126,7 +139,17 @@ namespace StoneAgeEncryptionService
             byte[] eVirtualRotorMove = new byte[movingCipherRotors];
             int totalRotors = TotalRotors;
 
+            //if (Experimental)
+            //{
+            //    for (int i = 1; i <= (TotalRotors - 2); i++)
+            //    {// all cipher rotors are Reflectors
+            //        CreateReflector(i, ref e, radix);
+            //    }
+            //}
+            //else
+            //{
             ConfigureRevLookUps(radix, totalRotors, ref e);
+            //}
 
             if (dm.Equals(DebugMode.Yes))
             {
@@ -144,7 +167,9 @@ namespace StoneAgeEncryptionService
                     string MainReport= "Results_" + post + ".txt";
                     string ReflectorUniqueName = "Reflector" + post + ".csv";
                     File.WriteAllText(ReflectorUniqueName, ExtractRotorIntoCSV(e, radix, TotalRotors - 1));
-                    File.WriteAllText(MainReport, oSettings.ReflectorDesc + Environment.NewLine + "Reflector Failure, Seed =" + BitConverter.ToInt32(oSeeds.SeedReflector, 0).ToString());
+                    byte[] ReflectorSeed = new byte[4];
+                    PopulateNewSeedForRotors(ref ReflectorSeed, oSeeds.SeedIndividualRotors, oSeeds.SeedIndividualRotors.Length - 4);
+                    File.WriteAllText(MainReport, oSettings.ReflectorDesc + Environment.NewLine + "Reflector Failure, Seed =" + BitConverter.ToInt32(ReflectorSeed, 0));
                 };
             }
 
@@ -235,9 +260,9 @@ namespace StoneAgeEncryptionService
         {
             if ((Rotor.Equals(0))) // stationary rotor, PlugBoard
             {
-                return (byte)e[Rotor, 0, currentByte];
-
+                return (byte)e[Rotor, 1, currentByte];
             }
+
             int OffsetTst = e[Rotor, 0, currentByte] - eVirtualRotorMove[Rotor - 1];
             return (byte)OffsetTst;
         }
@@ -262,7 +287,8 @@ namespace StoneAgeEncryptionService
         }
 
         private bool ValidateReflector(byte[,,] e, int Radix, int Rotor)
-        {   // this is to test logic changes, which should be infrequent
+        {// this is to test logic changes, which should be infrequent
+         //return true; //bypass
             bool result = true;
             for (int Byte = 0; Byte < Radix; Byte++)
             {
@@ -296,16 +322,20 @@ namespace StoneAgeEncryptionService
         }
 
         private void ConfigureRevLookUps(int Radix, int Rotors, ref byte[,,] e)
-        {
-            // populate Main Rotors side 0 with inverse of side 1 for quick reverse lookups
+        {// populate Main Rotors side 0 with inverse of side 1 for quick reverse lookups
             for (int iRotor = 1; iRotor <= Rotors - 2; iRotor++)
             {
-                for (int Col = 0; Col <= (Radix - 1); Col++)
-                {
-                    e[iRotor, 0, e[iRotor, 1, Col]] = (byte)Col;
-                }
+                ConfigureMovingCipherRotor(iRotor, ref e, Radix);
             }
         }
+        private void ConfigureMovingCipherRotor(int Rotor, ref byte[,,] e, int Radix)
+        {
+            for (int Col = 0; Col <= (Radix - 1); Col++)
+            {
+                e[Rotor, 1, e[Rotor, 0, Col]] = (byte)Col;
+            }
+        }
+
 
         private void MoveArrayPointerMainRotors(int Row, int eStartPosition, int Radix, ref byte[] eVirtualRotorMove)
         {
@@ -356,124 +386,54 @@ namespace StoneAgeEncryptionService
             }
             return Out;
         }
+        private void CreatePlugBoard(int PBPos, ref byte[,,] b, int radix)
+        {// this is new plugboard, works with address and ciphertext (side 1),
+         // PlainTxt is used to create ciphertext, but is not referenced in code
+         //
+         // address	PlainTxt	CipherTxt
+         // 0       122         20
+         // 20      111         0
 
-        // this is the original plugboard, which works with direct addressing, no logic is required
-        private void CreatePlugBoard(ref byte[,,] b, int Seed, int radix, int randomMultiplier)
-        { // re-create this rotor with seed for more variance:
-            byte[,,] bSource = CreateMachine(1, 2, radix);
-            byte[,,] bHolding = CreateMachine(1, 2, radix);
-            PopulateRotors(ref bSource, Seed, radix, randomMultiplier, 1, 2);
-
-            for (int iBinaryPos = 0; iBinaryPos <= (radix - 1); iBinaryPos++)
-            {
-                bHolding[0, 0, iBinaryPos] = bSource[0, 0, iBinaryPos];
-                bHolding[0, 1, iBinaryPos] = bSource[0, 1, iBinaryPos];
-            }
-
+            byte[,,] bHolding = CreateMachine(1, 1, radix);
             /* PlugBoard : igousbtrcpnmefwhqlkavzdyxj
              * PlugBoard : giuobsrtpcmnfehwlqakzvydjx*/
             for (int iBinaryPos = 0; iBinaryPos <= (radix - 2); iBinaryPos += 2)
             {
-                bHolding[0, 1, iBinaryPos] = bHolding[0, 0, iBinaryPos + 1];
-                bHolding[0, 1, iBinaryPos + 1] = bHolding[0, 0, iBinaryPos];
+                bHolding[0, 0, iBinaryPos] = b[PBPos, 0, iBinaryPos + 1];
+                bHolding[0, 0, iBinaryPos + 1] = b[PBPos, 0, iBinaryPos];
             }
-
             // now update b
             for (int iCol = 0; iCol <= (radix - 1); iCol++)
             {
-                b[0, 0, bHolding[0, 0, iCol]] = bHolding[0, 1, iCol];
-                b[0, 1, bHolding[0, 1, iCol]] = bHolding[0, 0, iCol];
+                b[PBPos, 1, b[PBPos, 0, iCol]] = bHolding[0, 0, iCol];
             }
         }
-        // this is the newer plugboard, which requires logic, don't use this, its too slow.
-        private void xCreatePlugBoard(ref byte[,,] b, int Seed, int radix, int randomMultiplier)
-        { // re-create this rotor with seed for more variance:
-            byte[,,] bSource = CreateMachine(1, 2, radix);
-            byte[,,] bHolding = CreateMachine(1, 2, radix);
-            PopulateRotors(ref bSource, Seed, radix, randomMultiplier, 1, 2);
+        private void CreateReflector(int reflectorPos, ref byte[,,] b, int radix)
+        {// this is the new Reflector:
+         // 1. Take opposing addresses (0 and 255)
+         // 2. Take plaintext at address 255 (223)
+         //    and assign to ciphertext at address 125,
+         //    which is PlainTxt at Plaintxt 0
+         // 3. Resume inwards with address (1 and 254), etc. etc.
+         //
+         //  address	PlainTxt	CipherTxt
+         //  0	        125	        135
+         //  125	    224	        223
+         //  255	    223	        116
 
-            for (int iBinaryPos = 0; iBinaryPos <= (radix - 1); iBinaryPos++)
-            {
-                bHolding[0, 0, iBinaryPos] = bSource[0, 0, iBinaryPos];
-            }
+         //  address    PlainTxt    CipherTxt
+         //  1          102         138
+         //  102        151         222
+         //  254        222         155
 
-            /* PlugBoard : igousbtrcpnmefwhqlkavzdyxj
-             * PlugBoard : giuobsrtpcmnfehwlqakzvydjx*/
-            for (int iBinaryPos = 0; iBinaryPos <= (radix - 2); iBinaryPos += 2)
-            {
-                bHolding[0, 1, iBinaryPos] = bHolding[0, 0, iBinaryPos + 1];
-                bHolding[0, 1, iBinaryPos + 1] = bHolding[0, 0, iBinaryPos];
-            }
-
-            // now update b
-            for (int iCol = 0; iCol <= (radix - 1); iCol++)
-            {
-                b[0, 0, iCol] = bHolding[0, 0, iCol];
-                b[0, 1, iCol] = bHolding[0, 1, iCol]; // this side is used during lookups
-            }
-        }
-
-        // this is the new Reflector, plaintxt != ciphertxt
-        private void CreateReflector(ref byte[,,] b, int Seed, int radix, int randomMultiplier)
-        {
             oSettings.ReflectorDesc = "this is the new Reflector, plaintxt != ciphertxt";
-            byte[,,] bSource = CreateMachine(1, 2, radix);
-            byte[,,] bHolding = CreateMachine(1, 2, radix);
-            PopulateRotors(ref bSource, Seed, radix, randomMultiplier, 1, 2);
-
-            for (int iBinaryPos = 0; iBinaryPos <= (radix - 1); iBinaryPos++)
-            {
-                bHolding[0, 0, radix - iBinaryPos - 1] = bSource[0, 0, iBinaryPos];
-            }
-
-            /*     
-            Reflector : phafjdsilcebguwyvkotqzmxrn
-            Reflector : nrxmzqtokvywugbeclisdjfahp*/
+            /*Reflector : phafjdsilcebguwyvkotqzmxrn
+              Reflector : nrxmzqtokvywugbeclisdjfahp*/
             for (int iBinaryPos = 0; iBinaryPos <= (radix) - 1; iBinaryPos++)
             {
-                bHolding[0, 1, bHolding[0, 0, iBinaryPos]] = bHolding[0, 0, radix - iBinaryPos - 1];
-            }
-
-            // now update b
-            for (int iCol = 0; iCol <= (radix - 1); iCol++)
-            {
-                b[TotalRotors - 1, 0, iCol] = bHolding[0, 0, iCol];
-                b[TotalRotors - 1, 1, iCol] = bHolding[0, 1, iCol];
+                b[reflectorPos, 1, b[reflectorPos, 0, iBinaryPos]] = b[reflectorPos, 0, radix - iBinaryPos - 1];
             }
         }
-
-        // this is the Original Reflector, PlainTxt = CipherTxt
-        private void xCreateReflector(ref byte[,,] b, int Seed, int radix, int randomMultiplier)
-        {
-            oSettings.ReflectorDesc = "this is the Original Reflector, PlainTxt = CipherTxt";
-            byte[,,] bSource = CreateMachine(1, 2, radix);
-            byte[,,] bHolding = CreateMachine(1, 2, radix);
-            PopulateRotors(ref bSource, Seed, radix, randomMultiplier, 1, 2);
-
-            for (int iBinaryPos = 0; iBinaryPos <= (radix - 1); iBinaryPos++)
-            {
-                bHolding[0, 0, radix - iBinaryPos - 1] = bSource[0, 0, iBinaryPos];
-                bHolding[0, 1, radix - iBinaryPos - 1] = bSource[0, 1, iBinaryPos]; // this wasen't doing anything, but leave it for immediate comparision purposes
-            }
-
-            /*     
-            Reflector : phafjdsilcebguwyvkotqzmxrn
-            Reflector : nrxmzqtokvywugbeclisdjfahp*/
-            int Query = radix - 1;
-            for (int iBinaryPos = 0; iBinaryPos <= (radix) - 1; iBinaryPos++)
-            {
-                bHolding[0, 1, (radix - iBinaryPos - 1)] = bHolding[0, 0, iBinaryPos];
-            }
-
-            // now update b
-            for (int iCol = 0; iCol <= (radix - 1); iCol++)
-            {
-                b[TotalRotors - 1, 0, bHolding[0, 0, iCol]] = bHolding[0, 1, iCol];
-                b[TotalRotors - 1, 1, bHolding[0, 1, iCol]] = bHolding[0, 0, iCol];
-            }
-        }
-
-
 
         private byte[,,] CreateMachine(int numRotors, int Sides, int Radix)
         {
@@ -481,7 +441,7 @@ namespace StoneAgeEncryptionService
             return e;
         }
 
-        private void PopulateNewSeedForRotors (ref byte[] newSeed, byte[] SeedRotors, int Start)
+        private void PopulateNewSeedForRotors(ref byte[] newSeed, byte[] SeedRotors, int Start)
         {
             newSeed[0] = SeedRotors[Start];
             Start++;
@@ -492,7 +452,7 @@ namespace StoneAgeEncryptionService
             newSeed[3] = SeedRotors[Start];
 
         }
-        private void PopulateRotors(ref byte[,,] b, int iSeed, int Radix, int RandomMultiplier, int Rotors, int Sides, bool MainRotorCreation =false)
+        private void PopulateRotors(ref byte[,,] b, int iSeed, int Radix, int RandomMultiplier, int Rotors, int Sides)
         { // for Main Rotor Creation
             byte[] newSeed = new byte[4];
             int RotorSeedArrayStart = -4; // inc by 4 to traverse the Rotor Seed Array
@@ -502,38 +462,16 @@ namespace StoneAgeEncryptionService
             byte[] bNext = new byte[RandomArraySize]; // Need unique numbers only, this is the available pool, larger than required
             for (int iRotor = 0; iRotor <= Rotors - 1; iRotor++)
             {
-                for (int iSide = 0; iSide <= (Sides - 1); iSide++)
+                // we need to re-seed each rotor with stored 4 byte number
+                RotorSeedArrayStart += 4;
+                PopulateNewSeedForRotors(ref newSeed, oSeeds.SeedIndividualRotors, RotorSeedArrayStart);
+                oRandom = new System.Random(BitConverter.ToInt32(newSeed, 0));
+                oRandom.NextBytes(bNext);
+
+                byte[] bUnique = GetUnique(bNext, Radix, RandomMultiplier, RandomArraySize);
+                for (int iBinaryPos = 0; iBinaryPos <= Radix - 1; iBinaryPos++)
                 {
-                    bool PopulateSide0 = false;
-                    if ((iRotor.Equals(0) || iRotor.Equals(Rotors - 1)) && iSide.Equals(0))
-                    {
-                        PopulateSide0 = true;
-                    }
-
-                    if (!PopulateSide0 && iSide.Equals(0))
-                    { }
-                    else
-                    {
-                        if (MainRotorCreation.Equals(true))
-                        {// we need to re-seed each rotor with stored 4 byte number
-                            RotorSeedArrayStart += 4;
-                            PopulateNewSeedForRotors(ref newSeed, oSeeds.SeedIndividualRotors, RotorSeedArrayStart);
-                            oRandom = new System.Random(BitConverter.ToInt32(newSeed, 0));
-                            oRandom.NextBytes(bNext);
-
-                        } else
-                        {
-                            oRandom.NextBytes(bNext);
-                        }
-
-                        byte[] bUnique = GetUnique(bNext, Radix, RandomMultiplier, RandomArraySize);
-                        for (int iBinaryPos = 0; iBinaryPos <= Radix - 1; iBinaryPos++)
-                        {
-                            b[iRotor, iSide, iBinaryPos] = bUnique[iBinaryPos];
-                        }
-
-                    }
-
+                    b[iRotor, 0, iBinaryPos] = bUnique[iBinaryPos];
                 }
             }
         }
@@ -594,19 +532,14 @@ namespace StoneAgeEncryptionService
 
         public void PopulateSeeds(
             byte[] bSeedXOR,
-            byte[] bSeedRotors,
             byte[] bSeedNotchPlan,
             byte[] bSeedTurnOverPositions,
-            byte[] bSeedStartPositions,
-            byte[] bSeedPlugBoard,
-            byte[] bSeedReflector)
+            byte[] bSeedStartPositions
+)
         {
             // these are used for regression testing
             oSeeds.SeedXOR = bSeedXOR;
             oSeeds.SeedNotchPlan = bSeedNotchPlan;
-            oSeeds.SeedPlugBoard = bSeedPlugBoard;
-            oSeeds.SeedReflector = bSeedReflector;
-            oSeeds.SeedRotors = bSeedRotors;
             oSeeds.SeedStartPositions = bSeedStartPositions;
             oSeeds.SeedTurnOverPositions = bSeedTurnOverPositions;
         }
@@ -618,7 +551,7 @@ namespace StoneAgeEncryptionService
 
         private byte[] GetSeeds()
         {
-            return oSeeds.SeedXOR.Concat(oSeeds.SeedNotchPlan).Concat(oSeeds.SeedPlugBoard).Concat(oSeeds.SeedReflector).Concat(oSeeds.SeedRotors).Concat(oSeeds.SeedStartPositions).Concat(oSeeds.SeedTurnOverPositions).ToArray();
+            return oSeeds.SeedXOR.Concat(oSeeds.SeedNotchPlan).Concat(oSeeds.SeedStartPositions).Concat(oSeeds.SeedTurnOverPositions).ToArray();
         }
 
         private byte[] GetSettings()
@@ -642,18 +575,6 @@ namespace StoneAgeEncryptionService
 
             newArray = b.Skip(i).Take(4).ToArray();
             oSeeds.SeedNotchPlan = newArray;
-            i += 4;
-
-            newArray = b.Skip(i).Take(4).ToArray();
-            oSeeds.SeedPlugBoard = newArray;
-            i += 4;
-
-            newArray = b.Skip(i).Take(4).ToArray();
-            oSeeds.SeedReflector = newArray;
-            i += 4;
-
-            newArray = b.Skip(i).Take(4).ToArray();
-            oSeeds.SeedRotors = newArray;
             i += 4;
 
             newArray = b.Skip(i).Take(4).ToArray();
@@ -697,8 +618,7 @@ namespace StoneAgeEncryptionService
             RNGCryptoServiceProvider oRNG1 = new RNGCryptoServiceProvider();
             RNGCryptoServiceProvider oRNG2 = new RNGCryptoServiceProvider();
             {
-                int TotalRotors = oSettings.MovingCipherRotors * 4;
-                TotalRotors += 16; // 4 additional keys are required
+                int TotalRotors = (oSettings.MovingCipherRotors + 2) * 4;
                 oSeeds.SeedIndividualRotors = new byte[TotalRotors];
 
                 byte[] bR1 = new byte[TotalRotors];
@@ -807,18 +727,6 @@ namespace StoneAgeEncryptionService
                 b = GetNxt(oRNG);
                 QuantumShuffle(ref b);
                 oSeeds.SeedNotchPlan = b;
-
-                b = GetNxt(oRNG);
-                QuantumShuffle(ref b);
-                oSeeds.SeedPlugBoard = b;
-
-                b = GetNxt(oRNG);
-                QuantumShuffle(ref b);
-                oSeeds.SeedReflector = b;
-
-                b = GetNxt(oRNG);
-                QuantumShuffle(ref b);
-                oSeeds.SeedRotors = b;
 
                 b = GetNxt(oRNG);
                 QuantumShuffle(ref b);
