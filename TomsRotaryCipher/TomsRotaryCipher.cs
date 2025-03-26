@@ -379,7 +379,8 @@ namespace StoneAgeEncryptionService
         }
         private string ExtractRotorIntoCSV(byte[,,] b, int radix, int rotor)
         {
-            string Out = "address,PlainTxt,CipherTxt" + Environment.NewLine;
+            //string Out = "address,PlainTxt,CipherTxt" + Environment.NewLine;
+            string Out = "Input,Predestined,Calculated" + Environment.NewLine;
             for (int i = 0; i < radix; i++)
             {
                 Out += i + "," + b[rotor, 0, i] + "," + b[rotor, 1, i] + Environment.NewLine;
