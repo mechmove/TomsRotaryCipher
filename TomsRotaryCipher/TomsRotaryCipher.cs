@@ -322,7 +322,7 @@ namespace StoneAgeEncryptionService
         }
 
         private void ConfigureRevLookUps(int Radix, int Rotors, ref byte[,,] e)
-        {// populate Main Rotors side 0 with inverse of side 1 for quick reverse lookups
+        {// populate Main Rotors side 1 (ciphertext) with inverse of side 0 (plaintext) for quick reverse lookups
             for (int iRotor = 1; iRotor <= Rotors - 2; iRotor++)
             {
                 ConfigureMovingCipherRotor(iRotor, ref e, Radix);
