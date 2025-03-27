@@ -303,10 +303,10 @@ namespace StoneAgeEncryptionService
         {// this is to test logic changes, which should be infrequent
          //return true; //bypass
             bool result = true;
-            for (int Byte = 0; Byte < Radix; Byte++)
+            for (int Input = 0; Input < Radix; Input++)
             {
                 // check for a match
-                if (Byte.Equals(e[Rotor, (int)RotorSide.Calculated, Byte]))// for the newer Reflector, only the Calculated side can be used
+                if (Input.Equals(e[Rotor, (int)RotorSide.Calculated, Input]))// for the newer Reflector, only the Calculated side can be used
                 {result = false;}
             }
             return result;
