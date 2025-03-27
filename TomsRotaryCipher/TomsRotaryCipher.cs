@@ -49,7 +49,7 @@ namespace StoneAgeEncryptionService
         public class Settings
         {
             public string ReflectorDesc;
-            public string BranchName = "Latest Re-Write : Thu 10:30am";
+            public string BranchName = "Latest Re-Write : Thu 12:54pm";
             public int MovingCipherRotors { get; set; }
             public NotchPlan NotchPlan { get; set; }
             public RotaryCipherMode RotaryCipherMode { get; set; }
@@ -269,28 +269,28 @@ namespace StoneAgeEncryptionService
             }
             return Rtn;
         }
-        private byte ByteLookupReverse(byte currentByte, int Rotor, byte[,,] e, byte[] eVirtualRotorMove)
+        private byte ByteLookupReverse(byte Input, int Rotor, byte[,,] e, byte[] eVirtualRotorMove)
         {
             if ((Rotor.Equals(0))) // stationary rotor, PlugBoard
             {
-                return e[Rotor, (int)RotorSide.Calculated , currentByte];
+                return e[Rotor, (int)RotorSide.Calculated , Input];
             }
 
-            int OffsetTst = e[Rotor, (int)RotorSide.Predestined, currentByte] - eVirtualRotorMove[Rotor - 1];
+            int OffsetTst = e[Rotor, (int)RotorSide.Predestined, Input] - eVirtualRotorMove[Rotor - 1];
             return (byte)OffsetTst;
         }
-        private byte ByteLookupForward(byte currentByte, int Rotor, int Radix, int TotalRotors, byte[,,] e, byte[] eVirtualRotorMove)
+        private byte ByteLookupForward(byte Input, int Rotor, int Radix, int TotalRotors, byte[,,] e, byte[] eVirtualRotorMove)
         {
             if (Rotor.Equals(0)) // stationary rotor PlugBoard
             {
-                return e[Rotor, (int)RotorSide.Calculated, currentByte];
+                return e[Rotor, (int)RotorSide.Calculated, Input];
             }
             if ((Rotor.Equals(TotalRotors - 1))) // stationary rotor Reflector
             {
-                return e[Rotor, (int)RotorSide.Calculated, currentByte];
+                return e[Rotor, (int)RotorSide.Calculated, Input];
             }
 
-            int Offset = eVirtualRotorMove[Rotor - 1] + currentByte;
+            int Offset = eVirtualRotorMove[Rotor - 1] + Input;
             if (Offset >= Radix)
             {
                 Offset = Offset - Radix;
@@ -505,66 +505,17 @@ namespace StoneAgeEncryptionService
                 PopulateNewSeedForRotors(ref newSeed, oSeeds.SeedIndividualRotors, RotorSeedArrayStart);
                 System.Random oRandom = new System.Random(BitConverter.ToInt32(newSeed, 0));
                 oRandom.NextBytes(bNext);
-
-                byte[] bUnique = GetUnique(bNext, Radix, RandomMultiplier, RandomArraySize);
-                for (int Input = 0; Input <= Radix - 1; Input++)
+                byte[] bUnique = bNext.Distinct().ToArray();
+                if (bUnique.Length.Equals(256))
                 {
-                    b[rotor, (int)RotorSide.Predestined, Input] = bUnique[Input];
-                }
-            }
-        }
-
-        private byte[] GetUnique(byte[] bRandomNums, int Radix, int RandomMultiplier, long RandomArraySize)
-        {
-            bool ZeroInserted = false;
-            byte[] bUnique = new byte[Radix];
-            int iCurrentPosUnique = 0;
-            for (long iRandomPos = 0; iRandomPos <= RandomArraySize - 1; iRandomPos++)
-            {
-                if (!iCurrentPosUnique.Equals(Radix))
-                {
-                    InsertUnique(ref bUnique, ref iCurrentPosUnique, bRandomNums[iRandomPos], ref ZeroInserted);
-                }
-                else
-                {
-                    if (iRandomPos > HighestIteration) // for Analysis
+                    for (int Input = 0; Input <= Radix - 1; Input++)
                     {
-                        HighestIteration = iRandomPos;
+                        b[rotor, (int)RotorSide.Predestined, Input] = bUnique[Input];
                     }
-                    iRandomPos = RandomArraySize;// force exit, all numbers filled
-                }
-            }
-            return bUnique;
-        }
-
-        private void InsertUnique(ref byte[] bUnique, ref int iCurrentPosUnique, byte DataToInsert, ref bool ZeroInserted)
-        {
-            bool bInsert = true;
-            for (int iUniquePos = 0; iUniquePos <= iCurrentPosUnique; iUniquePos++)
-            {
-                if (bUnique[iUniquePos].Equals(DataToInsert))
+                } else
                 {
-                    if (!DataToInsert.Equals(0))
-                    {
-                        bInsert = false;
-                        iUniquePos = iCurrentPosUnique;
-                    }
-                    else
-                    {
-                        if (!iUniquePos.Equals(iCurrentPosUnique))
-                        {
-                            bInsert = false;
-                            iUniquePos = iCurrentPosUnique;
-                        }
-                    }
+                    throw new Exception("Rotor does not contain 256 distinct numbers!");
                 }
-            }
-            if (bInsert)
-            {
-                if (DataToInsert.Equals(0)) { ZeroInserted = true; }
-                // if insert, then increment 
-                bUnique[iCurrentPosUnique] = DataToInsert;
-                iCurrentPosUnique++;
             }
         }
 
