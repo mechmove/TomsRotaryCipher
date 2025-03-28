@@ -49,7 +49,7 @@ namespace StoneAgeEncryptionService
         public class Settings
         {
             public string ReflectorDesc;
-            public string BranchName = "Latest Re-Write : Thu 12:54pm";
+            public string BranchName = "Latest Re-Write : Fri 9:49am";
             public int MovingCipherRotors { get; set; }
             public NotchPlan NotchPlan { get; set; }
             public RotaryCipherMode RotaryCipherMode { get; set; }
@@ -150,8 +150,9 @@ namespace StoneAgeEncryptionService
 
                 //create PlugBoard, rotor = 0,
                 //CreatePlugBoard(0, ref e, radix);
-                //Original_CreateReflector(0, ref e, radix);
-                CreateReflector(0, ref e, radix);
+                //Original_CreatePlugBoard(0, ref e, radix);
+                Original_CreateReflector(0, ref e, radix);
+                //CreateReflector(0, ref e, radix);
 
                 for (int i = 1; i <= (TotalRotors - 2); i++)
                 {
@@ -385,6 +386,33 @@ namespace StoneAgeEncryptionService
             }
             return Out;
         }
+
+        private void Original_CreatePlugBoard(int rotor, ref byte[,,] b, int radix)
+        { // re-create this rotor with seed for more variance:
+            byte[,,] bHolding = CreateMachine(1, 2, radix);
+
+            for (int Input = 0; Input <= (radix - 1); Input++)
+            {
+                bHolding[0, 0, Input] = b[rotor, (int)RotorSide.Predestined, Input];
+                bHolding[0, 1, Input] = b[rotor, (int)RotorSide.Calculated, Input];
+            }
+
+            /* PlugBoard : igousbtrcpnmefwhqlkavzdyxj
+             * PlugBoard : giuobsrtpcmnfehwlqakzvydjx*/
+            for (int Input = 0; Input <= (radix - 2); Input += 2)
+            {
+                bHolding[0, 1, Input] = bHolding[0, 0, Input + 1];
+                bHolding[0, 1, Input + 1] = bHolding[0, 0, Input];
+            }
+
+            // now update b
+            for (int Input = 0; Input <= (radix - 1); Input++)
+            {
+                b[0, 0, bHolding[0, 0, Input]] = bHolding[0, 1, Input];
+                b[0, 1, bHolding[0, 1, Input]] = bHolding[0, 0, Input];
+            }
+        }
+
         private void CreatePlugBoard(int rotor, ref byte[,,] b, int radix)
         {// this is new plugboard, works with input and Calculated (side 1),
          // Predestined is used to create Calculated, but is not referenced in code
