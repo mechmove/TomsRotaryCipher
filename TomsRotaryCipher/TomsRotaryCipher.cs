@@ -49,7 +49,7 @@ namespace StoneAgeEncryptionService
         public class Settings
         {
             public string ReflectorDesc;
-            public string BranchName = "Latest Re-Write : Fri 9:49am";
+            public string BranchName = "Latest Re-Write : Mon 7:36am";
             public int MovingCipherRotors { get; set; }
             public NotchPlan NotchPlan { get; set; }
             public RotaryCipherMode RotaryCipherMode { get; set; }
@@ -150,8 +150,8 @@ namespace StoneAgeEncryptionService
 
                 //create PlugBoard, rotor = 0,
                 //CreatePlugBoard(0, ref e, radix);
-                //Original_CreatePlugBoard(0, ref e, radix);
-                Original_CreateReflector(0, ref e, radix);
+                Original_CreatePlugBoard(0, ref e, radix);
+                //Original_CreateReflector(0, ref e, radix);
                 //CreateReflector(0, ref e, radix);
 
                 for (int i = 1; i <= (TotalRotors - 2); i++)
