@@ -311,15 +311,6 @@ namespace StoneAgeEncryptionService
             }
             return result;
         }
-
-        private void ConfigureStartPositions(byte[] eStartPositions, int Radix, int Rotors, ref byte[,,] e)
-        {
-            for (int i = 1; i <= Rotors - 2; i++)
-            {
-                MoveArrayPointer(i, eStartPositions[i - 1], Radix, ref e);
-            }
-        }
-
         private void ConfigureRevLookUps(int Radix, int Rotors, ref byte[,,] e)
         {// populate Main Rotors side 1 (ciphertext) with inverse of side 0 (plaintext) for quick reverse lookups
             for (int iRotor = 1; iRotor <= Rotors - 2; iRotor++)
@@ -344,25 +335,6 @@ namespace StoneAgeEncryptionService
                 iNew = 0;
             }
             eVirtualRotorMove[Row - 1] = (byte)iNew;
-        }
-
-
-        private void MoveArrayPointer(int Row, int eStartPosition, int Radix, ref byte[,,] e)
-        {
-            byte[] bAP = new byte[Radix];
-            for (int i = 0; i <= Radix - 1; i++)
-            {
-                bAP[i] = e[Row, (int)RotorSide.Predestined, i];
-            }
-            for (int i = 0; i <= (Radix - 1); i++)
-            {
-                e[Row, (int)RotorSide.Predestined, i] = bAP[eStartPosition];
-                eStartPosition++;
-                if (eStartPosition > (Radix - 1))
-                {
-                    eStartPosition = 0;
-                }
-            }
         }
 
         private void AssignStartPositions(ref byte[] eStartPositions, int iSeed)
