@@ -81,7 +81,7 @@ namespace StoneAgeEncryptionService
         {
             const int sides = 2;
             const int radix = 256;
-            const int randomMultiplier = 30;
+            const int randomMultiplier = 32;
 
             if (oSeeds.SeedNotchPlan is null)
             {
@@ -103,8 +103,11 @@ namespace StoneAgeEncryptionService
             oSettings.NotchPlan = np;
             int movingCipherRotors = oSettings.MovingCipherRotors;
 
+            byte[] eStartPositions = new byte[TotalRotors - 2];
+            AssignStartPositions(ref eStartPositions, BitConverter.ToInt32(oSeeds.SeedStartPositions, 0));
+
             byte[,,] e = CreateMachine(TotalRotors, sides, radix);
-            PopulateRotors(ref e, radix, randomMultiplier, TotalRotors);
+            PopulateRotors(ref e, radix, randomMultiplier, TotalRotors, eStartPositions);
 
             // make a local copy for speed optimization
             byte[] eSpinFactor = new byte[TotalRotors - 2];
@@ -112,10 +115,6 @@ namespace StoneAgeEncryptionService
             AssignTurnOverPositions(ref eSpinFactor, BitConverter.ToInt32(oSeeds.SeedTurnOverPositions, 0));
 
             RotorSpinPln.RotorSpinPlan oSig = new RotorSpinPln.RotorSpinPlan();
-
-            byte[] eStartPositions = new byte[TotalRotors - 2];
-            AssignStartPositions(ref eStartPositions, BitConverter.ToInt32(oSeeds.SeedStartPositions, 0));
-            ConfigureStartPositions(eStartPositions, radix, TotalRotors, ref e);
 
             oSettings.MovingCipherRotors = movingCipherRotors;
             oSettings.RotaryCipherMode = em;
@@ -312,15 +311,6 @@ namespace StoneAgeEncryptionService
             }
             return result;
         }
-
-        private void ConfigureStartPositions(byte[] eStartPositions, int Radix, int Rotors, ref byte[,,] e)
-        {
-            for (int i = 1; i <= Rotors - 2; i++)
-            {
-                MoveArrayPointer(i, eStartPositions[i - 1], Radix, ref e);
-            }
-        }
-
         private void ConfigureRevLookUps(int Radix, int Rotors, ref byte[,,] e)
         {// populate Main Rotors side 1 (ciphertext) with inverse of side 0 (plaintext) for quick reverse lookups
             for (int iRotor = 1; iRotor <= Rotors - 2; iRotor++)
@@ -345,25 +335,6 @@ namespace StoneAgeEncryptionService
                 iNew = 0;
             }
             eVirtualRotorMove[Row - 1] = (byte)iNew;
-        }
-
-
-        private void MoveArrayPointer(int Row, int eStartPosition, int Radix, ref byte[,,] e)
-        {
-            byte[] bAP = new byte[Radix];
-            for (int i = 0; i <= Radix - 1; i++)
-            {
-                bAP[i] = e[Row, (int)RotorSide.Predestined, i];
-            }
-            for (int i = 0; i <= (Radix - 1); i++)
-            {
-                e[Row, (int)RotorSide.Predestined, i] = bAP[eStartPosition];
-                eStartPosition++;
-                if (eStartPosition > (Radix - 1))
-                {
-                    eStartPosition = 0;
-                }
-            }
         }
 
         private void AssignStartPositions(ref byte[] eStartPositions, int iSeed)
@@ -519,9 +490,10 @@ namespace StoneAgeEncryptionService
             newSeed[3] = SeedRotors[Start];
 
         }
-        private void PopulateRotors(ref byte[,,] b, int Radix, int RandomMultiplier, int Rotors)
+        private void PopulateRotors(ref byte[,,] b, int Radix, int RandomMultiplier, int Rotors, byte[] eStartPositions)
         { // for Main Rotor Creation
             byte[] newSeed = new byte[4];
+            byte[] bOut = new byte[Radix];
             int RotorSeedArrayStart = -4; // inc by 4 to traverse the Rotor Seed Array
 
             long RandomArraySize = Radix * RandomMultiplier;
@@ -534,17 +506,26 @@ namespace StoneAgeEncryptionService
                 System.Random oRandom = new System.Random(BitConverter.ToInt32(newSeed, 0));
                 oRandom.NextBytes(bNext);
                 byte[] bUnique = bNext.Distinct().ToArray();
-                if (bUnique.Length.Equals(256))
-                {
+                if (bUnique.Length.Equals(Radix))
+                {// This was eliminated: ConfigureStartPositions(eStartPositions, radix, TotalRotors, ref e);
+                 // Run an optimized version of this now: 
+                    if (rotor>0&&rotor<(Rotors - 1))
+                    {
+                        byte Offset = eStartPositions[rotor - 1];
+                        Array.Copy(bUnique, Offset, bOut, 0, Radix - Offset);
+                        Array.Copy(bUnique, 0, bOut, Radix - Offset, Offset);
+                        Array.Copy(bOut, bUnique, Radix);
+                    }
                     for (int Input = 0; Input <= Radix - 1; Input++)
                     {
                         b[rotor, (int)RotorSide.Predestined, Input] = bUnique[Input];
                     }
                 } else
                 {
-                    throw new Exception("Rotor does not contain 256 distinct numbers!");
+                    throw new Exception("Rotor does not contain " + Radix.ToString() + " distinct numbers!");
                 }
             }
+            bOut = null;
         }
 
         public void PopulateSeeds(
